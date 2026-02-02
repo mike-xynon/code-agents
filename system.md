@@ -52,6 +52,22 @@ Parents send these to your inbox:
 - `resume` — Continue work
 - `abort` — Stop immediately
 
+### Initiating Agent Sessions
+When sending a message to an agent's inbox, **always provide both**:
+1. **Inbox message** — The markdown file in `inbox/`
+2. **Startup prompt** — Text to paste into the agent's Claude session
+
+Example startup prompt:
+```
+You are the <agent-name> agent. Read your agent files:
+1. Read /shared/state/agents/<path>/meta.md — Your identity
+2. Read /shared/state/agents/<path>/init.md — Your mission
+3. Read /shared/state/agents/<path>/governing.md — Your constraints
+4. Check /shared/state/agents/<path>/inbox/ — Pending messages
+
+Start by checking your inbox.
+```
+
 ### Progress Updates
 Update `report.md` regularly:
 - When you complete a task
