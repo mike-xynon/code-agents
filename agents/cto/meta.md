@@ -23,6 +23,7 @@ Oversee technology strategy and coordinate implementation across the NQ platform
 | copilot | Trading Copilot implementation | Design complete, ready to implement |
 | registry | Registry test system development | In progress |
 | agent-farm | Agent infrastructure maintenance | Complete |
+| corporate-actions | Corporate Actions Elections system | Design complete, ready to implement |
 
 ## External References
 

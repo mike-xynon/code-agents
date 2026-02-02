@@ -1,0 +1,250 @@
+[
+  [
+    "DataScope Select Reports",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "Data Type",
+    "Report",
+    "Supported Asset Types/\nContent",
+    "Description",
+    "",
+    ""
+  ],
+  [
+    "Pricing",
+    "End of Day Pricing",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nCredit Default Swap\nEquity\nFair Value Pricing\nFutures & Options\nGov't/Agency\nInterest Rate Swap\nLoans\nMBS\nMoney Market\nMunicipal\nMutual Funds\nOTC Equity Options",
+    "Retrieve initial‐ and validated end of day prices for all exchange‐traded instruments from the Refinitiv real‐time network. Non‐exchange‐traded instruments are sourced from Evaluated Pricing Service, as well as from various contributors.\n",
+    "",
+    ""
+  ],
+  [
+    "Pricing",
+    "Elektron End of Day  Pricing ",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFair Value Pricing\nFutures & Options\nGov't/Agency\nMBS\nMoney Market\nMunicipal\nMutual Funds\n",
+    "This report gets its prices from Elektron, Refinitiv’s strategic data source for pricing data. Elektron is also the data source for the existing Price History and Single Price History reports. Using the same content source ensures that prices output in extractions are consistent across all three reports. The Elektron End of Day Pricing report mirrors the legacy End of Day Pricing report and offers the same content available in the Price History and Single Price History reports.",
+    "",
+    ""
+  ],
+  [
+    "Pricing",
+    "Intraday Pricing ",
+    "Benchmarks\nCentral Bank OMO\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nCredit Default Swap\nEconomic Indicators/Polls\nEquity\nFutures & Options\nFX Polls\nGov't/Agency\nMBS\nMoney Market\nMoney Market/Bond Yield Polls\nMunicipal\nMutual Funds",
+    "Retrieve intraday pricing from Refinitiv real‐time network, as well as from various contributors.",
+    "",
+    ""
+  ],
+  [
+    "Pricing",
+    "Premium Pricing",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nCredit Default Swap\nGov't/Agency\nInterest Rate Swap\nLoans\nMBS\nMunicipal",
+    "Retrieve Refinitiv evaluated premium prices. Premium prices are available for fixed income instruments in the EMEA, Asia and US regions. Multiple pricing cycles for each region are available. Premium Pricing extractions can be scheduled to execute at a scheduled time or as a result of data availability.",
+    "",
+    ""
+  ],
+  [
+    "Pricing",
+    "Price History / Single Price History",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nMBS\nMoney Market\nMunicipal\nMutual Funds",
+    "Retrieve historical prices for a date range or specific date.  Pricing from 1980 is available.",
+    "",
+    ""
+  ],
+  [
+    "Pricing ",
+    "Premium EOD Pricing",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nLoans\nMBS\nMoney Market\nMunicipal\nMutual Funds",
+    "Retrieve Refinitiv validated premium end of day prices. Validated Premium EOD Prices are snapshot at optimal retrieve times to ensure the delivery of the “best” official close prices for global equity, futures & options, money/foreign exchange and fixed income instruments. Premium EOD Pricing extractions can be scheduled to execute at a scheduled time or as a result of data availability.",
+    "",
+    ""
+  ],
+  [
+    "Pricing ",
+    "Elektron Timeseries ",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nLoans\nMBS\nMoney Market\nMunicipal\nMutual Funds",
+    "Retrieve historical Elektron End of Day prices for a specified date range",
+    "",
+    ""
+  ],
+  [
+    "Pricing & Reference",
+    "Composite",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nCredit Default Swap\nEquity\nFair Value Pricing\nFutures & Options\nGov't/Agency\nInterest Rate Swap\nLoans\nMBS\nMoney Market\nMunicipal\nMutual Funds\nOTC Derivatives\nOTC Equity Options",
+    "Extract pricing, reference and corporate actions data from a single report template. \n\nThis report combines fields from the End of Day Pricing and Terms and Conditions reports, as well as certain key Corporate Actions fields and report-specific fields for extraction.\n\nNote:  You can only extract data from the Composite report template if you are permissioned for the relevant underlying report templates. All other fields are considered Prohibited.\n\nThe Composite report provides access to End of Day Pricing and Terms and Conditions extraction fields. Corporate Actions – Voting Rights and Dividends, and Capital Change.\n\n\n- Fields that appear in both the EOD Pricing and Terms and Conditions reports are available for all asset types applicable to EOD Pricing reports and follow EOD Pricing field permissioning rules. \n\n- Available for all asset classes currently supported for the EOD Pricing, Terms and Conditions and Corporate Actions report templates, excluding benchmarks and open access instruments.\n\n- Supported Corporate Actions events include the following Voting Rights fields: Voting Rights Date, Voting Rights Description, Dividends, and Voting Rights Per Share. Capital Change fields include: Rights ISIN, Rights Period End Date and Rights Period Start Date. The most recent event data are returned only. Range and delta queries are not supported currently.\n\n- Usage is reported at the field level. EOD Pricing and Corporate Actions fields are reported as regular extraction usage, and Terms and Conditions fields are reported as rental usage.\n\nNote that as of the DataScope Select 16.1 release, new fields will no longer be added to the Composite report template. They instead will be added to the underlying report template only.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Bond Schedules",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nGov't/Agency\nLoans\nMBS\nMunicipal",
+    "Provides Generic and MACE Schedules data for Global Government/Corporate and US Municipal bonds.\n\nFor coupon schedules, you can retrieve past, present and future coupon rates, rate changes and associated dates for government/corporate and CMO/ABS instruments.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Tranche - Factor History",
+    "CMO/ABS",
+    "Extract complete factor histories for CMO tranches.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Fund Allocations",
+    "Mutual Funds",
+    "Retrieve one or more fund allocation schemes, including asset, country, currency, debtor domicile, top 10 holdings, full holdings, holdings with ratings, investment country, maturity and sector for Lipper Fund instruments.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "MBS - Factor History",
+    "MBS",
+    "Extract complete factor histories for MBS instruments.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Ownership",
+    "Equity",
+    "Provides current global institutional holdings data on 13F institutions, mutual, pension and insurance funds, declarable stake holders and U.K. share registers that can be used to identify security holdings and possessions.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Ratings",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nGov't/Agency\nLoans\nMBS\nMunicipal",
+    "Retrieve latest and historical ratings data provided by active rating sources for global Government/Corporate bonds, US Municipal bonds and CMO/ABS securities. Ratings for issuers of securities are also available.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Symbol Cross Reference",
+    "CMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nMBS\nMoney Market\nMunicipal\nMutual Funds",
+    "Provides extensive instrument identification and industry classification systems for all identifier types including RICs. Delta capability is supported.",
+    "",
+    ""
+  ],
+  [
+    "Reference",
+    "Terms and Conditions",
+    "Benchmarks\nCMO/ABS\nCommodities\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nLoans\nMBS\nMiFID Sub-Class\nMoney Market\nMunicipal\nMutual Funds\nOTC Derivatives",
+    "Provides full terms and conditions data, including ratings and descriptive content. All terms and conditions data is validated by Refinitiv.",
+    "",
+    ""
+  ],
+  [
+    "Tick History",
+    "Time and Sales",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nLoans\nMBS\nMunicipal\nMutual Funds",
+    "Provides Level 1 data primarily contains trades, best bid and best ask messages.",
+    "",
+    ""
+  ],
+  [
+    "Tick History",
+    "Market Depth",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nFutures & Options\nGov't/Agency\nLoans\nMBS\nMunicipal\nMutual Funds",
+    "Provides Level 2 data contains only quotes (order) arranged either by price or by order.",
+    "",
+    ""
+  ],
+  [
+    "Tick History",
+    "Intraday Summaries",
+    "Equity\nMoney Market\nFutures & Options",
+    "Contains time bar (conflated) data from trade and quote messages ranging from 1 sec to 1 hour intervals.",
+    "",
+    ""
+  ],
+  [
+    "Tick History",
+    "Raw",
+    "Equity\nMoney Market\nFutures & Options",
+    "The Tick History raw format provides the data in a format unaltered from that transmitted on the Refinitiv Elektron real-time network, all of the Field, Value pairs are preserved.",
+    "",
+    ""
+  ],
+  [
+    "Analytics",
+    "Fixed Income Analytics",
+    "CMO/ABS\nConvertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nGov't/Agency\nLoans\nMBS\nMunicipal",
+    "Retrieve user-defined price/yield (P/Y) calculations, duration and convexity calculations, spread calculations, and complete cash flow calculations for U.S. government, international, and corporate securities, mortgage-backed securities (MBS), collateralized mortgage obligations (CMOs), asset-backed and whole loan-backed deals, and a wide range of pools.",
+    "",
+    ""
+  ],
+  [
+    "Analytics",
+    "Technical Indicators",
+    "Equity ",
+    "Retrieve technical analytical data like Alpha, Beta, Average Volume, Moving Averages, Volatility and Percent Changes based on End of Day Prices. Applies to Global Equity Instruments.",
+    "",
+    ""
+  ],
+  [
+    "Corporate Actions",
+    "Standard Events",
+    "Equity\nMutual Funds",
+    "Retrieve standard Corporate Actions data for equity instruments and funds share classes. Delta capabilities are supported.",
+    "",
+    ""
+  ],
+  [
+    "Corporate Actions",
+    "IPO Events",
+    "Equity",
+    "Retrieve initial public offerings events data for equity instruments.",
+    "",
+    ""
+  ],
+  [
+    "Corporate Actions",
+    "ISO 15022 Events ",
+    "Convertible\nCorporate (High Yield)\nCorporate (Invest Grade)\nEquity\nGov't/Agency",
+    "Retrieve ISO 15022 event data for equity and fixed-income instruments. Delta capabilities are supported.",
+    "",
+    ""
+  ],
+  [
+    "Debt Corporate Actions",
+    "ISO 15022 Events ",
+    "Gov't/Agency",
+    "Retrieve ISO 15022 event data for fixed-income instruments. Delta capabilities are supported.",
+    "",
+    ""
+  ],
+  [
+    "Entity",
+    "Audit",
+    "Entity",
+    "Retrieve audit histories for Legal Entity records.",
+    "",
+    ""
+  ],
+  [
+    "Entity",
+    "Detail ",
+    "Entity\nMutual Funds",
+    "Retrieve key data attributes for Legal Entity as well as Fund-level descriptive and relationships records. Delta capabilities are supported.",
+    "",
+    ""
+  ],
+  [
+    "Entity",
+    "Hierarchy",
+    "Entity",
+    "Retrieve complete hierarchies for Legal Entity records. Delta capabilities are supported.",
+    "",
+    ""
+  ]
+]
