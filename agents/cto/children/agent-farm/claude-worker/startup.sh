@@ -93,8 +93,8 @@ chown -R claude:claude /shared /workspace
 
 # Create tmux configuration for better terminal experience
 cat > /home/claude/.tmux.conf << 'EOF'
-# Disable mouse mode so terminal selection/copy works in browser
-set -g mouse off
+# Enable mouse mode for scrollback (hold Shift to select text for copy)
+set -g mouse on
 
 # Set larger scrollback buffer
 set -g history-limit 50000
