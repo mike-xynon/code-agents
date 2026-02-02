@@ -1,0 +1,52 @@
+{
+  "repositories": [
+    {
+      "name": "nuget",
+      "display_name": "NQ NuGet Libraries",
+      "git_url": "git@bitbucket.org:xynon/nq-nugetlibraries.git",
+      "description": "Shared NuGet packages and libraries"
+    },
+    {
+      "name": "portal",
+      "display_name": "Portal",
+      "git_url": "git@bitbucket.org:xynon/portal.git",
+      "description": "Main portal application"
+    },
+    {
+      "name": "registry",
+      "display_name": "NQ Trading (Registry)",
+      "git_url": "git@bitbucket.org:xynon/nq.trading.git",
+      "description": "Trading registry system - HIN ownership, positions, transactions"
+    },
+    {
+      "name": "registry-web",
+      "display_name": "Registry Backoffice Web",
+      "git_url": "git@bitbucket.org:xynon/nq.trading.backoffice.web.git",
+      "description": "Back office admin interface for registry"
+    },
+    {
+      "name": "reporting",
+      "display_name": "NQ Reporting",
+      "git_url": "git@bitbucket.org:xynon/nq.reporting.git",
+      "description": "Reporting services"
+    },
+    {
+      "name": "devops",
+      "display_name": "NQ DevOps",
+      "git_url": "git@bitbucket.org:xynon/nq.devops.git",
+      "description": "DevOps infrastructure and pipelines"
+    },
+    {
+      "name": "platform",
+      "display_name": "NQ Platform",
+      "git_url": "git@bitbucket.org:xynon/nq.platform.git",
+      "description": "Core platform services"
+    },
+    {
+      "name": "morrison",
+      "display_name": "NQ Morrison",
+      "git_url": "git@bitbucket.org:xynon/nq.morrison.git",
+      "description": "Morrison integration"
+    }
+  ]
+}

@@ -4,10 +4,13 @@
 **Parent:** cto
 **Status:** Paused - Awaiting Resume
 **Last Updated:** 2026-02-02
+**Location:** /shared/state/agents/cto/children/agent-farm
 
 ## Summary
 
-Completed comprehensive analysis of `/shared/repos/agent-farm` codebase. Identified concrete gaps between documented features and current implementation. Implementation deferred per user request.
+Codebase moved from `/shared/repos/agent-farm` into agent state folder. All agent-farm infrastructure code now lives with agent state and is version controlled in git (github.com:mike-xynon/code-agents.git).
+
+Completed comprehensive analysis of codebase. Identified concrete gaps between documented features and current implementation. Implementation deferred per user request.
 
 ## Analysis Findings
 
