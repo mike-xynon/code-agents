@@ -1,8 +1,44 @@
-# Agent Communication Design
+# Agent-Farm Design
 
 ## Overview
 
-This document describes the file-based communication system for coordinating Claude Code agents running in Docker containers. Agents are organized hierarchically with parent-child relationships, communicating via markdown files in a shared volume.
+Agent-Farm is the infrastructure for running and coordinating multiple Claude Code agents. It provides Docker-based isolation, web-based terminal access, and a markdown-based coordination protocol.
+
+## Conceptual Model
+
+Agent-Farm has three integrated components:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        AGENT-FARM                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐ │
+│  │  Web Dashboard  │  │ Worker Containers│  │   Agent     │ │
+│  │                 │  │                 │  │ Coordination │ │
+│  │ • Manage workers│  │ • Isolated envs │  │             │ │
+│  │ • Terminal UI   │  │ • Claude Code   │  │ • Hierarchy │ │
+│  │ • Status view   │  │ • .NET, Node    │  │ • Messaging │ │
+│  │                 │  │ • Git access    │  │ • State     │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘ │
+│         ▲                    ▲                    ▲        │
+│         │                    │                    │        │
+│    localhost:8080      claude-worker-*      /shared/state/ │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Component | What it is | Where it lives |
+|-----------|------------|----------------|
+| **Web Dashboard** | Browser UI for managing workers and terminal access | `claude-farm-dashboard` container, port 8080 |
+| **Worker Containers** | Isolated Claude Code environments | `claude-worker-<name>` containers |
+| **Agent Coordination** | Markdown-based governance and messaging | `/shared/state/agents/` volume |
+
+**Key distinction:** Workers are infrastructure (containers). Agents are governance roles that run IN workers.
+
+## Agent Coordination Protocol
+
+This section describes the file-based communication system for coordinating agents. Agents are organized hierarchically with parent-child relationships, communicating via markdown files in a shared volume.
 
 ## Architecture
 
@@ -207,8 +243,9 @@ claude-worker-<sanitized-name>
 ```
 
 Examples:
-- `claude-worker-nuget` (not `claude-worker-3eefb1bc-afd`)
-- `claude-worker-webfarm`
+- `claude-worker-cto`
+- `claude-worker-agent-farm`
+- `claude-worker-registry`
 - `claude-worker-portal`
 
 The sanitized name is:
@@ -262,12 +299,22 @@ When the dashboard restarts, worker names are recovered from the `WORKER_NAME` e
 
 ### Adding a New Worker
 
-1. Enter name in dashboard (e.g., "webfarm")
-2. Container created as `claude-worker-webfarm`
-3. Worker ID becomes `webfarm`
-4. Display name becomes `Webfarm`
+1. Enter name in dashboard (e.g., "registry")
+2. Container created as `claude-worker-registry`
+3. Worker ID becomes `registry`
+4. Display name becomes `Registry`
 
 Workers clone repositories into their private `~/repos/` directory on startup.
+
+### Typical Worker Setup
+
+| Worker | Purpose |
+|--------|---------|
+| `cto` | Top-level governance agent |
+| `agent-farm` | Works on agent-farm infrastructure |
+| `registry` | Works on registry codebase |
+| `portal` | Works on portal codebase |
+| `copilot` | Works on copilot features |
 
 ## Limitations
 

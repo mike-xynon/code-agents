@@ -2,99 +2,76 @@
 
 **Agent:** agent-farm
 **Parent:** cto
-**Status:** Paused - Awaiting Resume
-**Last Updated:** 2026-02-02
+**Status:** Active
+**Last Updated:** 2026-02-03
 **Location:** /shared/state/agents/cto/children/agent-farm
 
 ## Summary
 
-Codebase moved from `/shared/repos/agent-farm` into agent state folder. All agent-farm infrastructure code now lives with agent state and is version controlled in git (github.com:mike-xynon/code-agents.git).
+Agent-farm infrastructure is operational. Recent session (2026-02-03) focused on:
+- Clarifying conceptual model (workers vs agents)
+- Cleaning up naming confusion (removed "webfarm" references)
+- Documenting the three components: Dashboard, Workers, Agent Coordination
+- Setting up clean worker instances (cto, claude-farm, agent-farm)
 
-Completed comprehensive analysis of codebase. Identified concrete gaps between documented features and current implementation. Implementation deferred per user request.
+## Recent Changes (2026-02-03)
 
-## Analysis Findings
+### Documentation
+- Updated DESIGN.md with "Conceptual Model" section
+- Clarified distinction: workers are infrastructure, agents are governance roles
+- Removed "webfarm" references from examples
+- Added typical worker setup table
 
-### Dashboard UI Gaps
+### Infrastructure
+- Rebuilt worker image with sudo and p7zip-full
+- Created clean worker set: cto, claude-farm, agent-farm
+- Verified claude-config.tar.gz extraction (pre-authentication working)
+- Browser tab title now shows "Agent: WorkerName"
 
-**Missing API Buttons (API exists but no UI):**
+## Current Worker Setup
+
+| Worker | Port | Purpose |
+|--------|------|---------|
+| `claude-worker-cto` | 7681 | Top-level governance agent |
+| `claude-worker-claude-farm` | 7682 | Dashboard/infrastructure dev |
+| `claude-worker-agent-farm` | 7683 | Agent coordination dev |
+
+## Outstanding Gaps
+
+### Dashboard UI (API exists, no UI buttons)
 | Feature | API Endpoint | Status |
 |---------|--------------|--------|
 | Restart Worker | `POST /api/workers/<id>/restart` | No UI button |
 | Git Pull | `POST /api/workers/<id>/pull` | No UI button |
 | Bootstrap All | `POST /api/bootstrap` | No UI button |
 
-**Agent Communication UI (Documented in DESIGN.md:179-187 but not implemented):**
+### Agent Communication UI (documented but not implemented)
 - No inbox message count display
 - No control message buttons (finish, pause, resume, abort)
 - No report.md status display
 - No message history viewer
 
-### Worker Container Gaps
-
+### Worker Container
 | Feature | Status |
 |---------|--------|
 | Resource limits (memory/CPU) | Not configured |
 | Health check endpoint | Not present |
 | Orphaned container cleanup | Manual only |
-| Resource usage display | Not in dashboard |
-
-## Improvement Plan (Ready to Implement)
-
-### Priority 1: Add Missing UI Buttons
-**Location:** `dashboard/templates/index.html`
-
-Add to worker-actions div (line 485-488):
-- Restart button (calls POST /api/workers/<id>/restart)
-- Pull button (calls POST /api/workers/<id>/pull)
-
-Add below create form (line 469):
-- Bootstrap All button (calls POST /api/bootstrap)
-
-Requires:
-- New CSS classes: `.btn-secondary`, `.btn-warning`
-- New JS functions: `restartWorker()`, `pullWorker()`, `bootstrapWorkers()`
-- Update `refreshWorkers()` to include new buttons
-
-### Priority 2: Agent Status Visualization
-Implement DESIGN.md "UI Integration" features.
-
-### Priority 3: Worker Resource Management
-Add resource limits and health checks.
-
-## Task Progress
-
-| # | Task | Status |
-|---|------|--------|
-| 1 | Analyze dashboard UI | Completed |
-| 2 | Review agent communication | Completed |
-| 3 | Assess worker containers | Completed |
-| 4 | Add missing UI buttons | Ready (deferred) |
-| 5 | Agent status visualization | Pending |
-| 6 | Worker resource limits | Pending |
 
 ## Key Files
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `dashboard/app.py` | 376 | Flask backend |
-| `dashboard/templates/index.html` | 808 | Frontend UI |
-| `claude-worker/startup.sh` | 198 | Worker init |
-| `DESIGN.md` | 270 | Agent protocol |
+| File | Purpose |
+|------|---------|
+| `DESIGN.md` | Complete agent-farm design and protocol |
+| `CLAUDE.md` | Quick start and feature overview |
+| `dashboard/app.py` | Flask backend (377 lines) |
+| `dashboard/templates/index.html` | Frontend UI (808 lines) |
+| `claude-worker/Dockerfile` | Worker image definition |
+| `claude-worker/startup.sh` | Worker initialization |
 
-## Code References
+## Next Actions
 
-- Worker actions section: `agent-farm:dashboard/templates/index.html:485-488`
-- Create form section: `agent-farm:dashboard/templates/index.html:455-469`
-- Button styles location: `agent-farm:dashboard/templates/index.html:136-139`
-- Restart API: `agent-farm:dashboard/app.py:207-217`
-- Pull API: `agent-farm:dashboard/app.py:288-310`
-- Bootstrap API: `agent-farm:dashboard/app.py:313-348`
-
-## Resume Instructions
-
-When ready to continue, the implementation steps are:
-1. Add `.btn-secondary` and `.btn-warning` CSS classes after `.btn-sm`
-2. Add Restart/Pull buttons to worker card actions
-3. Add Bootstrap All button below create form
-4. Add JavaScript functions for the new buttons
-5. Update refreshWorkers() to include new buttons in dynamic rendering
+When resuming development:
+1. Add missing UI buttons (Restart, Pull, Bootstrap)
+2. Implement agent status visualization
+3. Add worker resource management
