@@ -94,3 +94,15 @@ git clone git@bitbucket.org:xynon/nq.trading.git registry
 2. **Stay in your lane** — Only modify repos relevant to your mission
 3. **No destructive actions** — Don't delete data, force push, or similar without explicit approval
 4. **Secrets stay secret** — Never commit API keys, passwords, or credentials
+
+## Docker Operations - CONFIRMATION REQUIRED
+
+**NEVER perform these actions without explicit user confirmation:**
+- Creating, deleting, or renaming Docker containers
+- Rebuilding Docker images
+- Starting or stopping containers
+- Modifying container configuration
+- Copying files to/from containers
+- Executing commands inside containers
+
+Always describe what you intend to do and wait for approval before any Docker operation.
