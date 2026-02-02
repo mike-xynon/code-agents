@@ -4,7 +4,7 @@
 Maintain and improve the agent-farm infrastructure (the agent coordination system).
 
 ## Codebase
-/shared/repos/agent-farm
+Located in this agent's folder (version controlled with code-agents repo).
 
 ## Current Tasks
 - Dashboard UI improvements

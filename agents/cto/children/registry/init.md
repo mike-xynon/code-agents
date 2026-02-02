@@ -4,7 +4,11 @@
 Maintain and improve the Trading Registry system.
 
 ## Codebase
-/shared/repos/registry
+Clone into your private home directory:
+```bash
+mkdir -p ~/repos && cd ~/repos
+git clone git@bitbucket.org:xynon/nq.trading.git registry
+```
 
 ## Current Tasks
 - Awaiting task assignment from user

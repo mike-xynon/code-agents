@@ -33,8 +33,8 @@ A Docker-based orchestration system for running multiple Claude Code instances i
                              |
                     +--------+--------+
                     |  Shared Volumes |
-                    | /shared/repos   |
-                    | /shared/state   |
+                    | /shared/state   |  <- Agent coordination (markdown)
+                    | ~/repos/        |  <- Private clones (per-container)
                     +-----------------+
 ```
 

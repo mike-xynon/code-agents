@@ -3,11 +3,15 @@
 Build the NuGet repository and report the number of build warnings encountered.
 
 ## Location
-Repository: `/shared/repos/nuget`
+Clone into your private home directory:
+```bash
+mkdir -p ~/repos && cd ~/repos
+git clone git@bitbucket.org:xynon/nq-nugetlibraries.git nuget
+```
 Solution: `NQ.AllNuget.sln`
 
 ## Steps
-1. Navigate to the nuget repository
+1. Clone and navigate to the nuget repository
 2. Run `dotnet build NQ.AllNuget.sln`
 3. Count the number of warnings in the output
 4. Report the warning count back to parent

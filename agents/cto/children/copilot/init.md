@@ -4,12 +4,18 @@
 Implement the Trading Copilot feature across the NQ platform.
 
 ## Repositories
-You need access to multiple repositories:
-| Name | Path | Purpose |
-|------|------|---------|
-| portal | /shared/repos/portal | UI (PWA) and API |
-| oms | /shared/repos/oms | Order Management System |
-| nuget | /shared/repos/nuget | Shared NuGet packages (NQ.Copilot) |
+Clone these into your private home directory (`~/repos/`):
+
+| Name | Bitbucket Repo | Purpose |
+|------|----------------|---------|
+| portal | `xynon/portal` | UI (PWA) and API |
+| nuget | `xynon/nq-nugetlibraries` | Shared NuGet packages (NQ.Copilot) |
+
+```bash
+mkdir -p ~/repos && cd ~/repos
+git clone git@bitbucket.org:xynon/portal.git portal
+git clone git@bitbucket.org:xynon/nq-nugetlibraries.git nuget
+```
 
 ## Design Documents (ASK USER FOR CONTENT)
 You do NOT have direct access to these files. You MUST ask the user to provide their content:

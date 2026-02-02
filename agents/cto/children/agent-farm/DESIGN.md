@@ -20,7 +20,6 @@ This document describes the file-based communication system for coordinating Cla
         ├── report.md                     <- Progress summary
         ├── design.md                     <- Design work, code references
         ├── inbox/                        <- Messages TO this agent
-        ├── workspace/                    <- Working files
         │
         └── children/
             └── <child-agent>/            <- Nested child
@@ -30,7 +29,6 @@ This document describes the file-based communication system for coordinating Cla
                 ├── report.md
                 ├── design.md
                 ├── inbox/
-                ├── workspace/
                 └── children/             <- Max 4 levels deep
 ```
 
@@ -155,18 +153,30 @@ When finishing (or receiving `finish` control):
 
 ## Repository Access
 
-Repos are mounted at `/shared/repos/`:
+**IMPORTANT:** Each agent clones repos into their private home directory (`~/repos/`).
+The `/shared/repos/` volume is reserved for future use — do NOT use without explicit permission.
 
-| Name | Path | Description |
-|------|------|-------------|
-| nuget | /shared/repos/nuget | Shared NuGet packages |
-| portal | /shared/repos/portal | Main portal application |
-| registry | /shared/repos/registry | Trading registry (HIN, positions) |
-| registry-web | /shared/repos/registry-web | Registry admin interface |
-| reporting | /shared/repos/reporting | Reporting services |
-| devops | /shared/repos/devops | DevOps infrastructure |
-| platform | /shared/repos/platform | Core platform services |
-| morrison | /shared/repos/morrison | Morrison integration |
+Clone command pattern:
+```bash
+mkdir -p ~/repos && cd ~/repos
+git clone git@bitbucket.org:xynon/<repo>.git <local-name>
+```
+
+| Local Name | Bitbucket Repo | Description |
+|------------|----------------|-------------|
+| nuget | `xynon/nq-nugetlibraries` | Shared NuGet packages |
+| portal | `xynon/portal` | Main portal application |
+| registry | `xynon/nq.trading` | Trading registry (HIN, positions) |
+| registry-web | `xynon/nq.trading.backoffice.web` | Registry admin interface |
+| reporting | `xynon/nq.reporting` | Reporting services |
+| devops | `xynon/nq.devops` | DevOps infrastructure |
+| platform | `xynon/nq.platform` | Core platform services |
+| morrison | `xynon/nq.morrison` | Morrison integration |
+
+This pattern ensures:
+- Agents have isolated working directories
+- No git conflicts between agents
+- Clean separation of concerns
 
 ## Code References
 
@@ -230,10 +240,11 @@ claude ALL=(ALL) NOPASSWD:ALL
 
 | Container Path | Docker Volume | Purpose |
 |---------------|---------------|---------|
-| `/shared/repos` | `docker-claude-farm_shared-repos` | Git repositories |
-| `/shared/state` | `docker-claude-farm_shared-state` | Agent state files |
+| `/shared/repos` | `docker-claude-farm_shared-repos` | Reserved for future use |
+| `/shared/state` | `docker-claude-farm_shared-state` | Agent coordination (markdown only) |
 | `/secrets/ssh` | Host path (optional) | SSH keys for git |
 | `/secrets/api` | Host path (optional) | API keys |
+| `/home/claude` | Per-container | Private working directory (repos cloned here) |
 
 ### Dashboard UI
 
@@ -256,11 +267,7 @@ When the dashboard restarts, worker names are recovered from the `WORKER_NAME` e
 3. Worker ID becomes `webfarm`
 4. Display name becomes `Webfarm`
 
-For workers needing custom workspace (not from git):
-```bash
-docker exec -u root claude-worker-<name> bash -c \
-  "rm -rf /workspace && ln -sf /shared/repos/<target> /workspace"
-```
+Workers clone repositories into their private `~/repos/` directory on startup.
 
 ## Limitations
 

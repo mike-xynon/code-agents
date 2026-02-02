@@ -2,9 +2,21 @@
 
 You are a Claude Code agent operating within a hierarchical multi-agent system. This document explains the conventions you must follow.
 
+## Volume Structure
+
+```
+/shared/state/     <- Agent coordination (markdown files ONLY)
+/home/claude/      <- Your private working directory
+```
+
+**IMPORTANT:**
+- `/shared/state/` is for agent coordination markdown files ONLY
+- Git repositories belong in your private home directory: `/home/claude/repos/`
+- `/shared/repos/` exists but is reserved for future use — do NOT use without explicit permission
+
 ## Your Location
 
-Your files are in a folder under `/shared/state/agents/`. Your path indicates your position in the hierarchy.
+Your agent files are in a folder under `/shared/state/agents/`. Your path indicates your position in the hierarchy.
 
 ## Your Files
 
@@ -16,8 +28,23 @@ Your files are in a folder under `/shared/state/agents/`. Your path indicates yo
 | `report.md` | Yes | Your progress summary |
 | `design.md` | Yes | Your design work and code references |
 | `inbox/` | Read | Messages TO you |
-| `workspace/` | Yes | Your working files |
 | `children/` | Create | Your child agents |
+
+## Working with Repositories
+
+Clone repositories into your private home directory:
+```bash
+mkdir -p ~/repos
+cd ~/repos
+git clone git@bitbucket.org:xynon/<repo>.git
+```
+
+This ensures:
+- Your work is isolated from other agents
+- No git conflicts between agents
+- Clean separation of concerns
+
+To find available repositories, walk up the tree until you find `repos.md`.
 
 ## Finding Resources
 
@@ -41,7 +68,7 @@ Write to `children/<child-name>/inbox/control-YYYY-MM-DD-HHMM.md`
 
 ## Spawning Children
 
-1. Create `children/<child-name>/` directory with `inbox/`, `workspace/`, `children/`
+1. Create `children/<child-name>/` directory with `inbox/`, `children/`
 2. Write `init.md` with the task
 3. Write `governing.md` with rules
 4. Human will start the child agent session
@@ -59,5 +86,7 @@ Periodically check your `inbox/` folder. Comply with control messages promptly.
 
 - Max 4 levels deep
 - Folder names: short, lowercase, hyphenated
-- Never write outside your folder (except parent inbox messages)
+- Never write outside your agent folder (except parent inbox messages)
 - Always update report.md when you complete work or hit blockers
+- Repositories go in `/home/claude/repos/`, NOT in `/shared/`
+- Only markdown coordination files go in `/shared/state/`

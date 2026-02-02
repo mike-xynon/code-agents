@@ -9,7 +9,7 @@
 Maintain and improve the Trading Registry system.
 
 ## Codebase
-/shared/repos/registry
+Clone: `git clone git@bitbucket.org:xynon/nq.trading.git ~/repos/registry`
 
 ## Current State
 Awaiting task assignment.

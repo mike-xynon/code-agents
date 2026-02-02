@@ -58,10 +58,12 @@ su - claude -c "git config --global --add safe.directory '*'"
 
 # Set up workspace based on whether a git repo is specified
 if [ -n "${GIT_REPO_URL}" ]; then
-    # Git repo specified - use /shared/repos/<name>
-    WORKER_DIR="/shared/repos/${REPO_NAME}"
-    mkdir -p "${WORKER_DIR}"
-    chown -R claude:claude "${WORKER_DIR}"
+    # Git repo specified - clone to private home directory ~/repos/<name>
+    REPOS_DIR="/home/claude/repos"
+    mkdir -p "${REPOS_DIR}"
+    chown -R claude:claude "${REPOS_DIR}"
+
+    WORKER_DIR="${REPOS_DIR}/${REPO_NAME}"
 
     echo "Cloning repository: ${GIT_REPO_URL}"
     if [ ! -d "${WORKER_DIR}/.git" ]; then
@@ -88,8 +90,9 @@ chown -h claude:claude /workspace
 # Set workspace to worker directory
 cd "${WORKER_DIR}"
 
-# Ensure proper ownership
-chown -R claude:claude /shared /workspace
+# Ensure proper ownership of shared state (for agent coordination)
+chown -R claude:claude /shared/state 2>/dev/null || true
+chown -R claude:claude /workspace
 
 # Create tmux configuration for better terminal experience
 cat > /home/claude/.tmux.conf << 'EOF'
