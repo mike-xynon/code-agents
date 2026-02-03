@@ -25,7 +25,14 @@ RUN apt-get update && apt-get install -y \
     locales \
     sudo \
     p7zip-full \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install AWS CLI v2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws
 
 # Set up locale for proper terminal handling
 RUN locale-gen en_US.UTF-8
