@@ -102,10 +102,11 @@ set -g mouse on
 # Set larger scrollback buffer
 set -g history-limit 50000
 
-# Override wheel behavior: always scroll tmux history, never pass to application
-# This prevents Claude Code from capturing wheel for input history cycling
-bind-key -T root WheelUpPane copy-mode -e \; send-keys -M
-bind-key -T root WheelDownPane send-keys -M
+# Mouse wheel scrolls tmux history buffer directly (not passed to application)
+# - WheelUp: enters copy-mode if needed, scrolls up 5 lines
+# - WheelDown: scrolls down 5 lines, auto-exits copy-mode at bottom (-e flag)
+bind-key -T root WheelUpPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-up' 'copy-mode -e; send-keys -X -N 5 scroll-up'
+bind-key -T root WheelDownPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-down' 'send-keys -X -N 5 scroll-down'
 
 # Set terminal color
 set -g default-terminal "screen-256color"

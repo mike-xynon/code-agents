@@ -316,6 +316,49 @@ Workers clone repositories into their private `~/repos/` directory on startup.
 | `portal` | Works on portal codebase |
 | `copilot` | Works on copilot features |
 
+## Terminal Scrolling
+
+The web terminal uses ttyd + tmux + xterm.js. Mouse wheel scrolling is configured to scroll tmux history rather than being passed to applications (which would interpret wheel as arrow keys).
+
+### tmux Configuration
+
+```bash
+# Enable mouse mode
+set -g mouse on
+
+# 50,000 line scrollback buffer
+set -g history-limit 50000
+
+# Mouse wheel scrolls tmux history directly
+# - WheelUp: enters copy-mode if needed, scrolls up 5 lines
+# - WheelDown: scrolls down, auto-exits copy-mode at bottom (-e flag)
+bind-key -T root WheelUpPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-up' 'copy-mode -e; send-keys -X -N 5 scroll-up'
+bind-key -T root WheelDownPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-down' 'send-keys -X -N 5 scroll-down'
+```
+
+### Scroll Behavior
+
+1. **Scroll up** - Enters tmux copy-mode and scrolls history
+2. **Scroll down** - Scrolls down in copy-mode
+3. **Reach bottom** - Auto-exits copy-mode (due to `-e` flag)
+4. **Type normally** - Works once out of copy-mode
+5. **Exit copy-mode manually** - Press `q` or `Escape`
+
+### xterm.js Configuration
+
+ttyd passes these options to xterm.js:
+- `scrollback=50000` - Browser-side scrollback buffer
+- `scrollSensitivity=3` - Scroll speed multiplier
+
+### Custom ttyd Index
+
+A custom `ttyd-index.html` is used with CSS fixes for the scrollbar:
+```css
+.xterm .xterm-screen {
+    margin-right: 20px;  /* Prevent fit addon from covering scrollbar */
+}
+```
+
 ## Limitations
 
 - Max 4 levels of nesting
