@@ -55,17 +55,34 @@ Parents send these to your inbox:
 ### Initiating Agent Sessions
 When sending a message to an agent's inbox, **always provide both**:
 1. **Inbox message** — The markdown file in `inbox/`
-2. **Startup prompt** — Text to paste into the agent's Claude session
+2. **Startup sequence** — Commands and prompt to paste into the agent's Claude session
 
-Example startup prompt:
+**Startup sequence format:**
+
+1. First, cd to the agent's state folder:
+```bash
+cd /shared/state/agents/<path>
 ```
-You are the <agent-name> agent. Read your agent files:
-1. Read /shared/state/agents/<path>/meta.md — Your identity
-2. Read /shared/state/agents/<path>/init.md — Your mission
-3. Read /shared/state/agents/<path>/governing.md — Your constraints
-4. Check /shared/state/agents/<path>/inbox/ — Pending messages
 
-Start by checking your inbox.
+2. Pull latest state and clone required repos:
+```bash
+cd /shared/state && git pull
+mkdir -p ~/repos && cd ~/repos
+git clone git@bitbucket.org:xynon/<repo1>.git <name1>
+git clone git@bitbucket.org:xynon/<repo2>.git <name2>
+cd /shared/state/agents/<path>
+```
+
+3. Then paste the startup prompt:
+```
+You are the <agent-name> agent. Read your agent files in this directory:
+
+1. Read init.md — Your mission
+2. Read design.md — Architecture decisions
+3. Read report.md — Current progress
+4. Check inbox/ — Pending messages
+
+Start by reading report.md for where you left off.
 ```
 
 ### Progress Updates
