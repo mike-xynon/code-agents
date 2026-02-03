@@ -318,7 +318,7 @@ Workers clone repositories into their private `~/repos/` directory on startup.
 
 ## Terminal Scrolling
 
-Mouse wheel scrolls tmux history (50k lines). Scrolling up enters tmux copy-mode; scroll back to bottom to exit and resume typing. Press `q` to exit copy-mode manually.
+Mouse wheel scrolls tmux history. Enters copy-mode on scroll up, exits at bottom.
 
 ## Limitations
 
