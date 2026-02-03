@@ -102,6 +102,11 @@ set -g mouse on
 # Set larger scrollback buffer
 set -g history-limit 50000
 
+# Override wheel behavior: always scroll tmux history, never pass to application
+# This prevents Claude Code from capturing wheel for input history cycling
+bind-key -T root WheelUpPane copy-mode -e \; send-keys -M
+bind-key -T root WheelDownPane send-keys -M
+
 # Set terminal color
 set -g default-terminal "screen-256color"
 

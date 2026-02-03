@@ -16,7 +16,11 @@
       "Bash(git stash:*)",
       "Bash(ssh:*)",
       "Bash(echo:*)",
-      "Bash(ttyd:*)"
+      "Bash(ttyd:*)",
+      "Bash(mouse:*)",
+      "Bash(wheel:*)",
+      "Skill(keybindings-help)",
+      "Bash(tmux list-keys:*)"
     ]
   }
 }
