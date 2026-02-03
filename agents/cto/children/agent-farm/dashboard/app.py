@@ -30,6 +30,7 @@ NGINX_HOST = os.environ.get('NGINX_HOST', 'localhost')
 NGINX_PORT = os.environ.get('NGINX_PORT', '8080')
 SSH_SECRETS_HOST_PATH = os.environ.get('SSH_SECRETS_HOST_PATH', '')
 API_SECRETS_HOST_PATH = os.environ.get('API_SECRETS_HOST_PATH', '')
+AWS_SECRETS_HOST_PATH = os.environ.get('AWS_SECRETS_HOST_PATH', '')
 
 # In-memory worker registry (could be replaced with Redis)
 workers = {}
@@ -165,6 +166,7 @@ def create_worker(worker_id, name=None, git_repo_url=''):
             SHARED_STATE_VOLUME: {'bind': '/shared/state', 'mode': 'rw'},
             **({SSH_SECRETS_HOST_PATH: {'bind': '/secrets/ssh', 'mode': 'ro'}} if SSH_SECRETS_HOST_PATH else {}),
             **({API_SECRETS_HOST_PATH: {'bind': '/secrets/api', 'mode': 'ro'}} if API_SECRETS_HOST_PATH else {}),
+            **({AWS_SECRETS_HOST_PATH: {'bind': '/secrets/aws', 'mode': 'ro'}} if AWS_SECRETS_HOST_PATH else {}),
         },
         network=NETWORK_NAME,
         labels={

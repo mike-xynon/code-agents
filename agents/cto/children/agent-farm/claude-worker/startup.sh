@@ -53,6 +53,18 @@ SSHEOF
     echo "SSH keys configured"
 fi
 
+# Set up AWS credentials if secrets are mounted
+if [ -d "/secrets/aws" ] && [ "$(ls -A /secrets/aws 2>/dev/null)" ]; then
+    echo "Setting up AWS credentials..."
+    mkdir -p /home/claude/.aws
+    chmod 700 /home/claude/.aws
+    [ -f "/secrets/aws/credentials" ] && cp /secrets/aws/credentials /home/claude/.aws/credentials
+    [ -f "/secrets/aws/config" ] && cp /secrets/aws/config /home/claude/.aws/config
+    chmod 600 /home/claude/.aws/* 2>/dev/null || true
+    chown -R claude:claude /home/claude/.aws
+    echo "AWS credentials configured"
+fi
+
 # Configure git safe.directory to avoid ownership warnings with shared volumes
 su - claude -c "git config --global --add safe.directory '*'"
 
