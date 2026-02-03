@@ -211,7 +211,6 @@ exec ttyd \
     --writable \
     --max-clients 10 \
     --ping-interval 30 \
-    --index /ttyd-index.html \
     -t cursorStyle=block \
     -t cursorBlink=true \
     -t fontSize=13 \
