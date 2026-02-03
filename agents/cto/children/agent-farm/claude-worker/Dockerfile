@@ -64,6 +64,9 @@ RUN useradd -m -s /bin/bash claude && \
 COPY startup.sh /startup.sh
 RUN chmod +x /startup.sh
 
+# Copy custom ttyd index.html with scrollbar fix
+COPY ttyd-index.html /ttyd-index.html
+
 # Copy Claude Code settings (dark mode, etc.)
 RUN mkdir -p /home/claude/.claude
 COPY claude-settings.json /home/claude/.claude/settings.json

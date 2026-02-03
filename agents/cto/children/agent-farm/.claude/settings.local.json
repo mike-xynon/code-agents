@@ -21,7 +21,9 @@
       "Bash(wheel:*)",
       "Skill(keybindings-help)",
       "Bash(tmux list-keys:*)",
-      "Bash(tmux bind-key:*)"
+      "Bash(tmux bind-key:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

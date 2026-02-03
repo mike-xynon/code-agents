@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal</title>
+    <style>
+        /* Fix: Make scrollbar clickable/draggable */
+        .xterm .xterm-screen {
+            margin-right: 20px;
+        }
+        /* Ensure scrollbar is visible and interactive */
+        .xterm .xterm-viewport {
+            overflow-y: scroll !important;
+        }
+        .xterm .xterm-viewport::-webkit-scrollbar {
+            width: 12px;
+        }
+        .xterm .xterm-viewport::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 6px;
+        }
+        .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <!-- ttyd will inject its own content here -->
+</body>
+</html>
