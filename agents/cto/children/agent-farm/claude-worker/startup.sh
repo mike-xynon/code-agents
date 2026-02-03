@@ -196,6 +196,7 @@ exec ttyd \
     -t cursorStyle=block \
     -t cursorBlink=true \
     -t fontSize=13 \
+    -t scrollback=50000 \
     -t 'theme={"background": "#1e1e1e", "foreground": "#d4d4d4", "cursor": "#ffffff", "cursorAccent": "#000000"}' \
     -t enableClipboard=true \
     su - claude -c "WORKER_ID='${WORKER_ID}' ANTHROPIC_API_KEY='${ANTHROPIC_API_KEY}' tmux attach-session -t '${WORKER_ID}'"

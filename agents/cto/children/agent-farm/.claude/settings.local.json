@@ -15,7 +15,8 @@
       "Bash(git fetch:*)",
       "Bash(git stash:*)",
       "Bash(ssh:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(ttyd:*)"
     ]
   }
 }
