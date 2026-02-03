@@ -11,6 +11,9 @@
       "Bash(git commit:*)",
       "Bash(git branch:*)",
       "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)",
       "Bash(ssh:*)",
       "Bash(echo:*)"
     ]
