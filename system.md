@@ -1,5 +1,22 @@
 # Claude Agent Farm - System Conventions
 
+## Shared Services
+
+### PostgreSQL (Registry Database)
+
+```
+Host:     host.docker.internal
+Port:     54320
+Database: nq_registry_local
+Username: postgres
+Password: TestPass123!
+```
+
+Connection string:
+```
+Host=host.docker.internal;Port=54320;Database=nq_registry_local;Username=postgres;Password=TestPass123!
+```
+
 ## Volume Structure
 
 ```
