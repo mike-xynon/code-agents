@@ -4,6 +4,8 @@
 
 Agent-Farm is the infrastructure for running and coordinating multiple Claude Code agents. It provides Docker-based isolation, web-based terminal access, and a markdown-based coordination protocol.
 
+For a visual explanation of the system, see: https://claude.ai/public/artifacts/8ed9b729-1c8b-4660-8605-0d641e1cd67c
+
 ## Conceptual Model
 
 Agent-Farm has three integrated components:

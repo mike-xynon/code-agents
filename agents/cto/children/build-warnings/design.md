@@ -144,4 +144,50 @@ Changes must compile in:
 - `portal` - Main UI/API application
 - `nq-morrison` - OMS trading system
 
-Use `dnt switch-to-projects` tool to test local changes before publishing.
+## Cross-Repo Build Testing with DNT
+
+To test nuget changes against consuming projects before merging:
+
+### Setup (One-Time)
+
+1. Install dnt globally:
+   ```bash
+   dotnet tool install -g dnt
+   ```
+
+2. Clone repos with expected directory structure:
+   ```bash
+   cd ~/repos
+   git clone git@bitbucket.org:xynon/nq-nugetlibraries.git nuget
+   git clone git@bitbucket.org:xynon/portal.git portal
+   git clone git@bitbucket.org:xynon/nq.morrison.git morrison
+
+   # OMS expects nuget at ../NQ-NugetLibraries
+   ln -s nuget NQ-NugetLibraries
+   ```
+
+### Testing Changes
+
+1. Switch consumer to use local project references:
+   ```bash
+   cd ~/repos/portal/api
+   dnt switch-to-projects
+
+   cd ~/repos/morrison
+   dnt switch-to-projects
+   ```
+
+2. Build consumers against your nuget branch:
+   ```bash
+   cd ~/repos/portal/api && dotnet build Tmw.Api.sln
+   cd ~/repos/morrison && dotnet build NQ.Morrison.sln
+   ```
+
+3. Revert to NuGet packages when done:
+   ```bash
+   dnt switch-to-packages
+   ```
+
+### How It Works
+
+Each consumer repo has a `switcher.json` that maps NuGet package names to local project paths. DNT rewrites the .csproj files to use ProjectReferences instead of PackageReferences.

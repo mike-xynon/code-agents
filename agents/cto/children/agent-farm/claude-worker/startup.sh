@@ -36,11 +36,18 @@ if [ -d "/secrets/ssh" ] && [ "$(ls -A /secrets/ssh 2>/dev/null)" ]; then
     find /home/claude/.ssh -type f -name "id_*" ! -name "*.pub" -exec chmod 600 {} \;
     find /home/claude/.ssh -type f -name "*.pub" -exec chmod 644 {} \;
 
-    # Create SSH config for Bitbucket if key exists
+    # Create SSH config for Bitbucket and GitHub if key exists
     if [ -f "/home/claude/.ssh/id_rsa_bitbucket" ]; then
         cat > /home/claude/.ssh/config << 'SSHEOF'
 Host bitbucket.org
     HostName bitbucket.org
+    User git
+    IdentityFile ~/.ssh/id_rsa_bitbucket
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
+
+Host github.com
+    HostName github.com
     User git
     IdentityFile ~/.ssh/id_rsa_bitbucket
     IdentitiesOnly yes

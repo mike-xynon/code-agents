@@ -24,6 +24,7 @@ Oversee technology strategy and coordinate implementation across the NQ platform
 | registry | Registry test system development | In progress |
 | agent-farm | Agent infrastructure maintenance | Complete |
 | corporate-actions | Corporate Actions Elections system | Design complete, ready to implement |
+| morrison-ops | Morrison business process improvement | Discovery phase |
 
 ## External References
 
