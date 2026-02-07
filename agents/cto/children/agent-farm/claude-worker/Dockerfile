@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
     p7zip-full \
     unzip \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI v2
