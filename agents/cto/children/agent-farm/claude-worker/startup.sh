@@ -86,7 +86,7 @@ su - claude -c "git config --global user.name 'mike'"
 su - claude -c "git config --global user.email 'mike@xynon.ai'"
 
 # Initialize shared state as code-agents git repo if not already done
-STATE_REPO_URL="git@bitbucket.org:xynon/code-agents.git"
+STATE_REPO_URL="git@github.com:mike-xynon/code-agents.git"
 echo "============================================"
 echo "Setting up shared state repository..."
 echo "============================================"
@@ -109,7 +109,7 @@ if [ ! -d "/shared/state/.git" ]; then
         echo "  2. No access to the repository"
         echo "  3. Network connectivity issue"
         echo ""
-        echo "To debug, try: ssh -T git@bitbucket.org"
+        echo "To debug, try: ssh -T git@github.com"
         echo ""
         echo "Agents will NOT be able to save their work!"
         echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
