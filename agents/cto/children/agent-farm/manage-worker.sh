@@ -108,28 +108,16 @@ check_prerequisites() {
         exit 1
     fi
 
-    # Check for Claude config archive
+    # Check for Claude config archive (required for authenticated session)
     if [ ! -f "$api_path/claude-config.tar.gz" ]; then
-        log_warn "Claude config archive not found: $api_path/claude-config.tar.gz"
-        log_warn "Workers will start without pre-authenticated Claude session"
-        log_warn ""
-        log_warn "To create claude-config.tar.gz from your home directory:"
-        log_warn "  cd ~"
-        log_warn "  tar czf claude-config.tar.gz .claude.json .claude/"
-        log_warn "  mv claude-config.tar.gz $api_path/"
-        log_warn ""
-    fi
-
-    # Check for API key (can be in file or in claude-config.tar.gz)
-    if [ ! -f "$api_path/anthropic_key" ]; then
-        if [ -f "$api_path/claude-config.tar.gz" ]; then
-            log_info "API key not in separate file, will use claude-config.tar.gz"
-        else
-            log_error "No API key found. Either:"
-            log_error "  1. Create file: echo 'sk-ant-...' > $api_path/anthropic_key"
-            log_error "  2. Or provide claude-config.tar.gz with authenticated session"
-            exit 1
-        fi
+        log_error "Claude config archive not found: $api_path/claude-config.tar.gz"
+        log_error ""
+        log_error "This file contains your authenticated Claude session."
+        log_error "To create it from your home directory:"
+        log_error "  cd ~"
+        log_error "  tar czf claude-config.tar.gz .claude.json .claude/"
+        log_error "  mv claude-config.tar.gz $api_path/"
+        exit 1
     fi
 
     # Check AWS secrets (optional but warn)
