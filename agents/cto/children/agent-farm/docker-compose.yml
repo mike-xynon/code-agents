@@ -52,11 +52,10 @@ services:
       - REDIS_URL=redis://redis:6379
       - SSH_SECRETS_HOST_PATH=${SSH_SECRETS_HOST_PATH:-}
       - API_SECRETS_HOST_PATH=${API_SECRETS_HOST_PATH:-}
+      - AWS_SECRETS_HOST_PATH=${AWS_SECRETS_HOST_PATH:-}
     volumes:
       # Mount Docker socket to manage containers
       - /var/run/docker.sock:/var/run/docker.sock
-      # Mount SSH secrets for git clone
-      - ./secrets/ssh:/secrets/ssh:ro
       # Mount repos config for bootstrap
       - ./repos.json:/app/repos.json:ro
     depends_on:

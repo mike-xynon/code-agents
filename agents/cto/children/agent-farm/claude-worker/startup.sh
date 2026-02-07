@@ -60,8 +60,70 @@ SSHEOF
     echo "SSH keys configured"
 fi
 
+# Set up AWS credentials if secrets are mounted
+if [ -d "/secrets/aws" ] && [ "$(ls -A /secrets/aws 2>/dev/null)" ]; then
+    echo "Setting up AWS credentials..."
+    mkdir -p /home/claude/.aws
+    chmod 700 /home/claude/.aws
+    [ -f "/secrets/aws/credentials" ] && cp /secrets/aws/credentials /home/claude/.aws/credentials
+    [ -f "/secrets/aws/config" ] && cp /secrets/aws/config /home/claude/.aws/config
+    chmod 600 /home/claude/.aws/* 2>/dev/null || true
+    chown -R claude:claude /home/claude/.aws
+    echo "AWS credentials configured"
+
+    # Login to AWS CodeArtifact for NuGet packages
+    echo "Logging into AWS CodeArtifact..."
+    su - claude -c "aws codeartifact login --tool dotnet --repository xynon --domain xynon --domain-owner 618651307171 --region ap-southeast-2" || {
+        echo "Warning: CodeArtifact login failed, continuing anyway..."
+    }
+fi
+
 # Configure git safe.directory to avoid ownership warnings with shared volumes
 su - claude -c "git config --global --add safe.directory '*'"
+
+# Set git user identity
+su - claude -c "git config --global user.name 'mike'"
+su - claude -c "git config --global user.email 'mike@xynon.ai'"
+
+# Initialize shared state as code-agents git repo if not already done
+STATE_REPO_URL="git@github.com:mike-xynon/code-agents.git"
+echo "============================================"
+echo "Setting up shared state repository..."
+echo "============================================"
+if [ ! -d "/shared/state/.git" ]; then
+    echo "Cloning code-agents repo into /shared/state..."
+    if su - claude -c "git clone '${STATE_REPO_URL}' /shared/state 2>&1"; then
+        chown -R claude:claude /shared/state
+        echo "SUCCESS: Shared state repo initialized"
+    else
+        echo ""
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo "ERROR: Failed to clone code-agents repo"
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo ""
+        echo "Repo URL: ${STATE_REPO_URL}"
+        echo "Target:   /shared/state"
+        echo ""
+        echo "Possible causes:"
+        echo "  1. SSH key not set up correctly"
+        echo "  2. No access to the repository"
+        echo "  3. Network connectivity issue"
+        echo ""
+        echo "To debug, try: ssh -T git@github.com"
+        echo ""
+        echo "Agents will NOT be able to save their work!"
+        echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        echo ""
+    fi
+else
+    echo "Shared state repo exists, pulling latest..."
+    if su - claude -c "cd /shared/state && git pull 2>&1"; then
+        echo "SUCCESS: Shared state updated"
+    else
+        echo "WARNING: Failed to pull shared state repo, continuing with existing state..."
+    fi
+fi
+echo ""
 
 # Set up workspace based on whether a git repo is specified
 if [ -n "${GIT_REPO_URL}" ]; then
@@ -101,19 +163,33 @@ cd "${WORKER_DIR}"
 chown -R claude:claude /shared/state 2>/dev/null || true
 chown -R claude:claude /workspace
 
+# Create symlinks for agent start scripts in home directory
+echo "Creating agent start script symlinks..."
+for script in /shared/state/agents/cto/children/*/start.sh; do
+    if [ -f "$script" ]; then
+        agent_name=$(basename $(dirname "$script"))
+        ln -sf "$script" "/home/claude/${agent_name}.sh"
+        echo "  ~/${agent_name}.sh -> $script"
+    fi
+done
+chown -h claude:claude /home/claude/*.sh 2>/dev/null || true
+
 # Create tmux configuration for better terminal experience
+# NOTE: tmux mouse mode is OFF due to a bug in ttyd/xterm.js where shift+click
+# selection (to bypass tmux mouse capture) loses the selection on mouse release.
+# This means we can't have both mouse scrolling AND copy/paste working together.
+# With mouse OFF: copy/paste works natively, scroll via PageUp/PageDown keys.
+# See: https://github.com/tsl0922/ttyd/issues/1453
 cat > /home/claude/.tmux.conf << 'EOF'
-# Enable mouse mode for scrollback (hold Shift to select text for copy)
-set -g mouse on
+# Mouse OFF - required for copy/paste to work (ttyd shift+select bug)
+set -g mouse off
 
 # Set larger scrollback buffer
 set -g history-limit 50000
 
-# Mouse wheel scrolls tmux history buffer directly (not passed to application)
-# - WheelUp: enters copy-mode if needed, scrolls up 5 lines
-# - WheelDown: scrolls down 5 lines, auto-exits copy-mode at bottom (-e flag)
-bind-key -T root WheelUpPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-up' 'copy-mode -e; send-keys -X -N 5 scroll-up'
-bind-key -T root WheelDownPane if-shell -F '#{pane_in_mode}' 'send-keys -X -N 5 scroll-down' 'send-keys -X -N 5 scroll-down'
+# PageUp enters copy-mode and scrolls up, auto-exits when you scroll back to bottom
+bind-key -T root PageUp copy-mode -eu
+bind-key -T root PageDown send-keys PageDown
 
 # Set terminal color
 set -g default-terminal "screen-256color"
@@ -206,7 +282,6 @@ exec ttyd \
     --writable \
     --max-clients 10 \
     --ping-interval 30 \
-    --index /ttyd-index.html \
     -t cursorStyle=block \
     -t cursorBlink=true \
     -t fontSize=13 \

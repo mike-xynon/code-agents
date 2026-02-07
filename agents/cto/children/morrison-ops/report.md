@@ -1,33 +1,49 @@
-# Morrison Ops Status Report
+# Morrison-Ops Agent - Status Report
 
+**Agent:** morrison-ops
+**Parent:** cto
+**Status:** Initializing
 **Last Updated:** 2026-02-07
-**Status:** Initialising
 
-## Summary
+## Mission
 
-Agent created. Two workstreams identified:
-1. Customer Onboarding (AML/KYC friction)
-2. CMM Visibility for large clients
+Business process improvement for Morrison Securities. Communication and design agent — not a coding agent.
+
+## Workstreams
+
+| Workstream | Status | Next Action |
+|------------|--------|-------------|
+| Customer Onboarding | Waiting for input | Need SJ's details on actual problems |
+| CMM Visibility | Discovery | Identify where CMM data lives |
+
+## Current Focus
+
+Agent just initialized. Need to:
+1. Understand current state of both workstreams
+2. Gather stakeholder input
+3. Document findings in design.md
+
+## Open Questions
+
+### Customer Onboarding
+- What specific problems are customers experiencing?
+- What does the current AML/KYC flow look like?
+- Who is the provider and what's their perspective?
+
+### CMM Visibility
+- Where is CMM data stored today?
+- What systems have access to it?
+- What's the current manual process for managing large clients?
+- What thresholds would trigger alerts?
 
 ## Blockers
 
-| Blocker | Owner | Status |
-|---------|-------|--------|
-| SJ input on onboarding issues | SJ | Pending |
-| CMM data source identification | TBD | Not started |
+- **Customer Onboarding:** Waiting for SJ input on actual problems
+- **CMM Visibility:** Need to identify data sources
 
-## Next Actions
+## Progress Log
 
-1. Await SJ input on actual onboarding problems
-2. Begin CMM discovery - where is CMM data surfaced today?
-3. Identify who owns CMM calculations at Morrison
-
-## Workstream Status
-
-### Onboarding
-- **Phase:** Discovery
-- **Waiting on:** SJ to clarify actual problems and potential solutions
-
-### CMM Visibility
-- **Phase:** Discovery
-- **Next:** Understand current CMM reporting and data availability
+### 2026-02-07
+- Agent created
+- Initial files set up (init.md, governing.md, design.md)
+- Awaiting activation

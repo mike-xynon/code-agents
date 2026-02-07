@@ -12,7 +12,10 @@ CS8618 warnings indicate non-nullable properties that aren't initialized. These 
 
 ```
 Is the property a navigation property (EF relationship)?
-├── Yes → Use `= null!`
+├── Yes ↓
+│   Is it a required relationship (FK is non-nullable)?
+│   ├── Yes → Non-nullable FK (Guid) + Nullable nav with [Required] attribute
+│   └── No  → Nullable FK (Guid?) + Nullable nav (Entity?)
 └── No ↓
 
 Is it a collection?
@@ -47,14 +50,28 @@ public class Instrument
 }
 ```
 
-### 2. Navigation Properties
+### 2. Navigation Properties (EF Core)
+
+**Required relationship (non-nullable FK):**
 ```csharp
 public class AssetModelItem
 {
-    public Guid AssetModelId { get; set; }
-    public AssetModel AssetModel { get; set; } = null!;  // EF will populate
+    public Guid AssetModelId { get; set; }           // Non-nullable FK - DB constraint
+    [Required]
+    public AssetModel? AssetModel { get; set; }      // Nullable nav + Required validation
 }
 ```
+
+**Optional relationship (nullable FK):**
+```csharp
+public class Order
+{
+    public Guid? ParentOrderId { get; set; }         // Nullable FK - optional in DB
+    public Order? ParentOrder { get; set; }          // Nullable nav
+}
+```
+
+**Why NOT `= null!`:** It hides nullability issues and doesn't work well with EF Core's model detection for required relationships.
 
 ### 3. Collections
 ```csharp
@@ -86,6 +103,16 @@ public sealed class LimitRuleCriteria : RuleCriteria
 {
     public string FocusValue { get; set; } = "*";  // Default for missing JSON
 }
+```
+
+### 6. System-Created Entities
+When creating entities in system/background processes, use the constant:
+```csharp
+var entity = new BankAccount
+{
+    Id = Guid.NewGuid(),
+    CreatedBy = EntityBase.SystemCreatedBy,  // Use constant, not "system" string
+};
 ```
 
 ## Project-Specific Notes

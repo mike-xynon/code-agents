@@ -30,6 +30,19 @@ NGINX_HOST = os.environ.get('NGINX_HOST', 'localhost')
 NGINX_PORT = os.environ.get('NGINX_PORT', '8080')
 SSH_SECRETS_HOST_PATH = os.environ.get('SSH_SECRETS_HOST_PATH', '')
 API_SECRETS_HOST_PATH = os.environ.get('API_SECRETS_HOST_PATH', '')
+AWS_SECRETS_HOST_PATH = os.environ.get('AWS_SECRETS_HOST_PATH', '')
+
+# Service port configuration
+# Maps service name -> container port (what the service runs on inside the container)
+SERVICE_PORTS = {
+    'portal': 3000,      # npm dev server for portal
+    'api': 5000,         # .NET API
+    'web': 8080,         # generic web server
+    'vite': 5173,        # Vite dev server
+}
+
+# Base port for service port allocation (services get ports starting from here)
+SERVICE_BASE_PORT = int(os.environ.get('SERVICE_BASE_PORT', '8100'))
 
 # In-memory worker registry (could be replaced with Redis)
 workers = {}
@@ -60,6 +73,49 @@ def get_available_port():
             return port
 
     raise Exception("No available ports")
+
+
+def get_all_used_service_ports():
+    """Get all service ports currently in use across all workers"""
+    used_ports = set()
+    for worker in workers.values():
+        services = worker.get('services', {})
+        for service_info in services.values():
+            if isinstance(service_info, dict) and 'host_port' in service_info:
+                used_ports.add(service_info['host_port'])
+    return used_ports
+
+
+def allocate_service_ports(service_names):
+    """Allocate host ports for requested services
+
+    Returns dict: {service_name: {'container_port': X, 'host_port': Y}}
+    """
+    if not service_names:
+        return {}
+
+    used_ports = get_all_used_service_ports()
+    allocated = {}
+    next_port = SERVICE_BASE_PORT
+
+    for service_name in service_names:
+        if service_name not in SERVICE_PORTS:
+            continue  # Skip unknown services
+
+        container_port = SERVICE_PORTS[service_name]
+
+        # Find next available host port
+        while next_port in used_ports:
+            next_port += 1
+
+        allocated[service_name] = {
+            'container_port': container_port,
+            'host_port': next_port
+        }
+        used_ports.add(next_port)
+        next_port += 1
+
+    return allocated
 
 
 def sync_workers_from_docker():
@@ -100,6 +156,16 @@ def sync_workers_from_docker():
                 # Capitalize for display (nuget -> Nuget, registry-web -> Registry-Web)
                 display_name = '-'.join(word.capitalize() for word in display_name.split('-'))
 
+                # Get service ports from label
+                labels = container.attrs.get('Config', {}).get('Labels', {})
+                services_label = labels.get('services', '')
+                service_ports = {}
+                if services_label:
+                    try:
+                        service_ports = json.loads(services_label)
+                    except json.JSONDecodeError:
+                        pass
+
                 # Update or create worker entry
                 if worker_id not in workers:
                     workers[worker_id] = {
@@ -108,6 +174,7 @@ def sync_workers_from_docker():
                         'status': container.status,
                         'port': port,
                         'git_repo': git_repo,
+                        'services': service_ports,
                         'created_at': container.attrs.get('Created', ''),
                         'container_id': container.id
                     }
@@ -115,6 +182,7 @@ def sync_workers_from_docker():
                     workers[worker_id]['status'] = container.status
                     workers[worker_id]['port'] = port
                     workers[worker_id]['container_id'] = container.id
+                    workers[worker_id]['services'] = service_ports
                     # Preserve name if already set, otherwise update
                     if not workers[worker_id].get('name') or workers[worker_id]['name'].startswith('Worker '):
                         workers[worker_id]['name'] = display_name
@@ -128,8 +196,16 @@ def sync_workers_from_docker():
         print(f"Error syncing workers: {e}")
 
 
-def create_worker(worker_id, name=None, git_repo_url=''):
-    """Create a new Claude worker container"""
+def create_worker(worker_id, name=None, git_repo_url='', services=None):
+    """Create a new Claude worker container
+
+    Args:
+        worker_id: Optional worker ID (will be derived from name if not provided)
+        name: Display name for the worker
+        git_repo_url: Git repository to clone
+        services: List of service names to expose (e.g., ['portal', 'api'])
+                  Each service gets its container port mapped to a unique host port
+    """
     # Use sanitized name as the worker_id for cleaner container names
     # e.g., name="Nuget" -> worker_id="nuget" -> container="claude-worker-nuget"
     if name:
@@ -145,8 +221,20 @@ def create_worker(worker_id, name=None, git_repo_url=''):
     except NotFound:
         pass
 
+    # Allocate ports for requested services
+    service_ports = allocate_service_ports(services or [])
+
+    # Build port mappings: ttyd + any services
+    port_bindings = {'7681/tcp': port}
+    for service_name, port_info in service_ports.items():
+        container_port = f"{port_info['container_port']}/tcp"
+        port_bindings[container_port] = port_info['host_port']
+
     # Use sanitized name for repo directory (allows reuse across restarts)
     repo_dir_name = worker_id
+
+    # Store service config as JSON in a label for sync recovery
+    services_label = json.dumps(service_ports) if service_ports else ''
 
     # Create container
     container = docker_client.containers.run(
@@ -159,17 +247,19 @@ def create_worker(worker_id, name=None, git_repo_url=''):
             'GIT_REPO_URL': git_repo_url,
             'ANTHROPIC_API_KEY': ANTHROPIC_API_KEY,
         },
-        ports={'7681/tcp': port},
+        ports=port_bindings,
         volumes={
             SHARED_REPOS_VOLUME: {'bind': '/shared/repos', 'mode': 'rw'},
             SHARED_STATE_VOLUME: {'bind': '/shared/state', 'mode': 'rw'},
             **({SSH_SECRETS_HOST_PATH: {'bind': '/secrets/ssh', 'mode': 'ro'}} if SSH_SECRETS_HOST_PATH else {}),
             **({API_SECRETS_HOST_PATH: {'bind': '/secrets/api', 'mode': 'ro'}} if API_SECRETS_HOST_PATH else {}),
+            **({AWS_SECRETS_HOST_PATH: {'bind': '/secrets/aws', 'mode': 'ro'}} if AWS_SECRETS_HOST_PATH else {}),
         },
         network=NETWORK_NAME,
         labels={
             'claude-farm': 'worker',
             'worker-id': worker_id,
+            'services': services_label,
         },
         restart_policy={'Name': 'unless-stopped'},
     )
@@ -182,6 +272,7 @@ def create_worker(worker_id, name=None, git_repo_url=''):
         'status': 'starting',
         'port': port,
         'git_repo': git_repo_url,
+        'services': service_ports,
         'created_at': datetime.utcnow().isoformat(),
         'container_id': container.id
     }
@@ -237,11 +328,31 @@ def list_workers():
 
 @app.route('/api/workers', methods=['POST'])
 def create_worker_api():
-    """Create a new worker"""
+    """Create a new worker
+
+    JSON body:
+        name: Worker name (required)
+        git_repo: Git repository URL (optional)
+        services: List of services to expose (optional)
+                  Valid services: portal, api, web, vite
+                  Example: ["portal", "api"]
+
+    Returns worker info including allocated service ports:
+        {
+            "id": "registry",
+            "name": "Registry",
+            "port": 7684,
+            "services": {
+                "portal": {"container_port": 3000, "host_port": 8100},
+                "api": {"container_port": 5000, "host_port": 8101}
+            }
+        }
+    """
     data = request.get_json() or {}
 
     name = data.get('name')
     git_repo = data.get('git_repo', '')
+    services = data.get('services', [])
 
     # If no name provided, generate one from ID or random
     if not name:
@@ -249,7 +360,7 @@ def create_worker_api():
         name = f"Worker-{worker_id[:8]}"
 
     try:
-        worker = create_worker(None, name, git_repo)
+        worker = create_worker(None, name, git_repo, services)
         return jsonify(worker), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -360,6 +471,15 @@ def list_repos():
         config = json.load(f)
 
     return jsonify(config.get('repositories', []))
+
+
+@app.route('/api/services', methods=['GET'])
+def list_services():
+    """List available services that can be exposed on workers"""
+    return jsonify({
+        'available_services': SERVICE_PORTS,
+        'description': 'Pass service names in the "services" array when creating a worker'
+    })
 
 
 @app.route('/health')

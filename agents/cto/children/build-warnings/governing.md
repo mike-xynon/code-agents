@@ -22,11 +22,30 @@ Do NOT use `required` when:
 - JSON deserialization might not provide the field
 - Field is optional in business logic
 
-### 2. Navigation Properties
-Use `= null!` for:
-- EF Core navigation properties
-- Parent/child relationships
-- Properties set by framework (not user code)
+### 2. Navigation Properties (EF Core Entities)
+
+For **required relationships** (non-nullable FK):
+```csharp
+public Guid AccountId { get; set; }           // Non-nullable FK enforces DB constraint
+[Required]
+public SoeAccount? Account { get; set; }      // Nullable nav + Required attribute
+```
+
+For **optional relationships** (nullable FK):
+```csharp
+public Guid? ParentId { get; set; }           // Nullable FK
+public Parent? Parent { get; set; }           // Nullable nav
+```
+
+**Why this pattern:**
+- Non-nullable FK (`Guid`) enforces NOT NULL at database level
+- Nullable navigation (`Entity?`) allows null when not loaded (no `.Include()`)
+- `[Required]` attribute adds validation when saving
+
+**Do NOT use:**
+- `= null!` on navigation properties - hides nullability issues
+- `required` modifier on navigation properties - use `[Required]` attribute instead
+- `Guid?` FK with non-nullable navigation - causes EF migration issues
 
 ### 3. Collections
 Use `= []` or `= new()` for:
