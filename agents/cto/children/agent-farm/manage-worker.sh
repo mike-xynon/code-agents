@@ -18,6 +18,12 @@ DASHBOARD_URL="${DASHBOARD_URL:-http://localhost:8080}"
 IMAGE_NAME="claude-worker:latest"
 STARTUP_WAIT_SECONDS=20
 
+# Secrets paths (must match docker-compose.yml and .env)
+SECRETS_BASE="${SECRETS_BASE:-C:/Users/Micha/AgentFarm/Secrets}"
+SSH_SECRETS_PATH="${SECRETS_BASE}/ssh"
+API_SECRETS_PATH="${SECRETS_BASE}/api"
+AWS_SECRETS_PATH="${SECRETS_BASE}/aws"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -73,6 +79,63 @@ check_prerequisites() {
         log_error "Dashboard is not reachable at $DASHBOARD_URL"
         log_error "Make sure docker-compose is running: docker-compose up -d"
         exit 1
+    fi
+
+    # Check secrets directories exist
+    log_info "Checking secrets paths..."
+
+    # Convert Windows path if needed
+    local ssh_path="${SSH_SECRETS_PATH}"
+    local api_path="${API_SECRETS_PATH}"
+    local aws_path="${AWS_SECRETS_PATH}"
+
+    # Check SSH secrets
+    if [ ! -d "$ssh_path" ]; then
+        log_error "SSH secrets directory not found: $ssh_path"
+        log_error "Expected: SSH key files (id_rsa_bitbucket, etc.)"
+        exit 1
+    fi
+
+    # Check for SSH key
+    if [ ! -f "$ssh_path/id_rsa_bitbucket" ]; then
+        log_error "SSH key not found: $ssh_path/id_rsa_bitbucket"
+        exit 1
+    fi
+
+    # Check API secrets
+    if [ ! -d "$api_path" ]; then
+        log_error "API secrets directory not found: $api_path"
+        exit 1
+    fi
+
+    # Check for Claude config archive
+    if [ ! -f "$api_path/claude-config.tar.gz" ]; then
+        log_warn "Claude config archive not found: $api_path/claude-config.tar.gz"
+        log_warn "Workers will start without pre-authenticated Claude session"
+        log_warn ""
+        log_warn "To create claude-config.tar.gz from your home directory:"
+        log_warn "  cd ~"
+        log_warn "  tar czf claude-config.tar.gz .claude.json .claude/"
+        log_warn "  mv claude-config.tar.gz $api_path/"
+        log_warn ""
+    fi
+
+    # Check for API key (can be in file or in claude-config.tar.gz)
+    if [ ! -f "$api_path/anthropic_key" ]; then
+        if [ -f "$api_path/claude-config.tar.gz" ]; then
+            log_info "API key not in separate file, will use claude-config.tar.gz"
+        else
+            log_error "No API key found. Either:"
+            log_error "  1. Create file: echo 'sk-ant-...' > $api_path/anthropic_key"
+            log_error "  2. Or provide claude-config.tar.gz with authenticated session"
+            exit 1
+        fi
+    fi
+
+    # Check AWS secrets (optional but warn)
+    if [ ! -d "$aws_path" ]; then
+        log_warn "AWS secrets directory not found: $aws_path"
+        log_warn "CodeArtifact login for NuGet packages will not work"
     fi
 
     log_info "Prerequisites OK"
