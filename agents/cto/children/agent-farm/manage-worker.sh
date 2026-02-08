@@ -286,6 +286,80 @@ show_logs() {
     docker logs "$container_name" --tail 50 -f
 }
 
+# Update claude-config.tar.gz from home directory
+update_claude_config() {
+    log_info "Updating Claude config archive..."
+
+    # Get home directory (works on Windows Git Bash)
+    local home_dir="${USERPROFILE:-$HOME}"
+
+    # Convert to Unix-style path if needed
+    if [[ "$home_dir" == *":"* ]]; then
+        home_dir=$(cygpath -u "$home_dir" 2>/dev/null || echo "$home_dir")
+    fi
+
+    local claude_json="$home_dir/.claude.json"
+    local claude_dir="$home_dir/.claude"
+    local target_path="${API_SECRETS_PATH}/claude-config.tar.gz"
+
+    # Convert target path to Unix-style for tar
+    if [[ "$target_path" == *":"* ]]; then
+        target_path=$(cygpath -u "$target_path" 2>/dev/null || echo "$target_path")
+    fi
+
+    log_info "Home directory: $home_dir"
+    log_info "Target: $target_path"
+
+    # Check source files exist
+    if [ ! -f "$claude_json" ]; then
+        log_error "Claude config not found: $claude_json"
+        log_error "You need to authenticate Claude Code first by running 'claude' locally"
+        exit 1
+    fi
+
+    if [ ! -d "$claude_dir" ]; then
+        log_error "Claude directory not found: $claude_dir"
+        log_error "You need to authenticate Claude Code first by running 'claude' locally"
+        exit 1
+    fi
+
+    # Check target directory exists
+    local target_dir=$(dirname "$target_path")
+    if [ ! -d "$target_dir" ]; then
+        log_error "Target directory does not exist: $target_dir"
+        exit 1
+    fi
+
+    # Create the archive
+    log_info "Creating archive from home directory..."
+
+    cd "$home_dir" || {
+        log_error "Cannot access home directory: $home_dir"
+        exit 1
+    }
+
+    # Create tar.gz (ignore "file changed" warnings which exit code 1)
+    tar czf "$target_path" .claude.json .claude/ 2>&1 || true
+
+    # Verify the archive was created (the real test of success)
+    if [ ! -f "$target_path" ]; then
+        log_error "Archive was not created at: $target_path"
+        exit 1
+    fi
+
+    # Check archive is not empty (minimum viable size)
+    local size_bytes=$(stat -c%s "$target_path" 2>/dev/null || stat -f%z "$target_path" 2>/dev/null || echo "0")
+    if [ "$size_bytes" -lt 1000 ]; then
+        log_error "Archive is too small ($size_bytes bytes) - something went wrong"
+        exit 1
+    fi
+
+    local size=$(ls -lh "$target_path" | awk '{print $5}')
+    log_info "Claude config archive updated successfully"
+    log_info "Location: $target_path"
+    log_info "Size: $size"
+}
+
 # Main command handler
 case "${1:-}" in
     build)
@@ -375,6 +449,10 @@ case "${1:-}" in
         show_logs "$2"
         ;;
 
+    update-config)
+        update_claude_config
+        ;;
+
     *)
         echo "Claude Worker Farm - Worker Management"
         echo ""
@@ -387,8 +465,10 @@ case "${1:-}" in
         echo "  delete <name>             Delete a worker"
         echo "  status                    Show all workers"
         echo "  logs <name>               Show worker logs (follows)"
+        echo "  update-config             Update claude-config.tar.gz from home directory"
         echo ""
         echo "Examples:"
+        echo "  $0 update-config"
         echo "  $0 build"
         echo "  $0 create morrison-ops"
         echo "  $0 rebuild registry git@bitbucket.org:xynon/nq.trading.git"
