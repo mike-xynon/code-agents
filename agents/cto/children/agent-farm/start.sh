@@ -1,94 +1,49 @@
 #!/bin/bash
-# Claude Worker Farm - Quick Start Script
+# Agent-Farm Agent Startup Script
+# Run this in the agent-farm worker terminal to start the agent
 
 set -e
 
-echo "========================================"
-echo "  Claude Worker Farm - Quick Start"
-echo "========================================"
+echo "=== Agent-Farm Agent Startup ==="
 echo ""
 
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo "ERROR: Docker is not running. Please start Docker and try again."
-    exit 1
-fi
+# Step 1: Pull latest state
+echo "Pulling latest state..."
+cd /shared/state && git pull
 
-# Check if .env exists
-if [ ! -f .env ]; then
-    echo "Creating .env from template..."
-    cp .env.example .env
-    echo ""
-    echo "IMPORTANT: Please edit .env and add your ANTHROPIC_API_KEY"
-    echo "Then run this script again."
-    exit 1
-fi
+# Step 2: Change to agent directory
+echo "Changing to agent directory..."
+cd /shared/state/agents/cto/children/agent-farm
 
-# Check if ANTHROPIC_API_KEY is set
-source .env
-if [ -z "$ANTHROPIC_API_KEY" ] || [ "$ANTHROPIC_API_KEY" = "your-api-key-here" ]; then
-    echo "WARNING: ANTHROPIC_API_KEY is not set in .env"
-    echo "Claude Code will not work without it."
-    echo ""
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-fi
+echo ""
+echo "=========================================="
+echo "  ACTIVATION PROMPT - Copy and paste this"
+echo "=========================================="
+echo ""
+cat << 'PROMPT'
+You are the **agent-farm** agent — responsible for maintaining and improving the agent-farm infrastructure.
 
-# Build the worker image
-echo ""
-echo "Building claude-worker image..."
-docker build -t claude-worker:latest ./claude-worker
+Read your initialization files:
+1. Read `/shared/state/system.md` for system conventions
+2. Read `init.md` for your mission and scope
+3. Read `governing.md` for rules from your parent
+4. Read `report.md` for current status (if it exists)
+5. Read `DESIGN.md` for the full protocol specification
+6. Check `inbox/` for any messages
 
-# Create network if it doesn't exist
-echo ""
-echo "Creating Docker network..."
-docker network create claude-farm-network 2>/dev/null || true
+Your scope covers three components:
+1. **Web Dashboard** — Flask app in `dashboard/`
+2. **Worker Containers** — Docker image in `claude-worker/`
+3. **Agent Coordination** — Markdown protocol in `/shared/state/`
 
-# Build and start services
+Start by reading your files and updating report.md with your current understanding.
+PROMPT
 echo ""
-echo "Starting services with docker-compose..."
-docker-compose up -d --build
-
-# Wait for services to be ready
+echo "=========================================="
 echo ""
-echo "Waiting for services to start..."
-sleep 5
-
-# Check if dashboard is responding
-echo ""
-echo "Checking dashboard health..."
-for i in {1..30}; do
-    if curl -s http://localhost:8080/health > /dev/null 2>&1; then
-        echo "Dashboard is ready!"
-        break
-    fi
-    echo "Waiting for dashboard... ($i/30)"
-    sleep 2
-done
-
-# Show status
-echo ""
-echo "========================================"
-echo "  Claude Worker Farm is running!"
-echo "========================================"
-echo ""
-echo "Dashboard URL: http://localhost:8080"
-echo ""
-echo "To view logs:     docker-compose logs -f"
-echo "To stop:          docker-compose down"
-echo "To restart:       docker-compose restart"
-echo ""
-echo "Quick commands:"
-echo "  Create worker:  curl -X POST http://localhost:8080/api/workers -H 'Content-Type: application/json' -d '{\"name\": \"My Worker\"}'"
-echo "  List workers:   curl http://localhost:8080/api/workers"
+echo "Starting Claude Code interactively..."
+echo "Paste the prompt above to activate the agent."
 echo ""
 
-# Open browser on macOS/Linux
-if command -v open &> /dev/null; then
-    open http://localhost:8080
-elif command -v xdg-open &> /dev/null; then
-    xdg-open http://localhost:8080
-fi
+# Step 3: Start Claude Code interactively
+exec claude
