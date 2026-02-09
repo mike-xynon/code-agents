@@ -165,6 +165,14 @@ chown -R claude:claude /workspace
 
 # Create symlinks for agent start scripts in home directory
 echo "Creating agent start script symlinks..."
+
+# Symlink parent cto agent if it has start.sh
+if [ -f "/shared/state/agents/cto/start.sh" ]; then
+    ln -sf "/shared/state/agents/cto/start.sh" "/home/claude/cto.sh"
+    echo "  ~/cto.sh -> /shared/state/agents/cto/start.sh"
+fi
+
+# Symlink child agents
 for script in /shared/state/agents/cto/children/*/start.sh; do
     if [ -f "$script" ]; then
         agent_name=$(basename $(dirname "$script"))
