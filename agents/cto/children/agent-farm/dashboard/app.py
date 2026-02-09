@@ -39,7 +39,12 @@ SERVICE_PORTS = {
     'api': 5000,         # .NET API
     'web': 8080,         # generic web server
     'vite': 5173,        # Vite dev server
+    'mcp-auth': 8765,    # Claude MCP OAuth callback (fixed port - must match host)
 }
+
+# Services that require fixed host ports (host port = container port)
+# Used for OAuth callbacks where redirect URL must match what browser hits
+FIXED_PORT_SERVICES = {'mcp-auth'}
 
 # Base port for service port allocation (services get ports starting from here)
 SERVICE_BASE_PORT = int(os.environ.get('SERVICE_BASE_PORT', '8100'))
@@ -90,6 +95,10 @@ def allocate_service_ports(service_names):
     """Allocate host ports for requested services
 
     Returns dict: {service_name: {'container_port': X, 'host_port': Y}}
+
+    For services in FIXED_PORT_SERVICES, host_port = container_port.
+    This is required for OAuth callbacks where the redirect URL must match
+    what the browser actually hits (e.g., localhost:8765 -> container:8765).
     """
     if not service_names:
         return {}
@@ -104,16 +113,26 @@ def allocate_service_ports(service_names):
 
         container_port = SERVICE_PORTS[service_name]
 
-        # Find next available host port
-        while next_port in used_ports:
+        # Fixed port services use the same port on host and container
+        if service_name in FIXED_PORT_SERVICES:
+            host_port = container_port
+            if host_port in used_ports:
+                # Port conflict - another worker has this fixed port
+                # Skip with warning (only one worker can have mcp-auth at a time)
+                print(f"Warning: Fixed port {host_port} for {service_name} already in use, skipping")
+                continue
+        else:
+            # Dynamic allocation for regular services
+            while next_port in used_ports:
+                next_port += 1
+            host_port = next_port
             next_port += 1
 
         allocated[service_name] = {
             'container_port': container_port,
-            'host_port': next_port
+            'host_port': host_port
         }
-        used_ports.add(next_port)
-        next_port += 1
+        used_ports.add(host_port)
 
     return allocated
 
@@ -334,8 +353,9 @@ def create_worker_api():
         name: Worker name (required)
         git_repo: Git repository URL (optional)
         services: List of services to expose (optional)
-                  Valid services: portal, api, web, vite
+                  Valid services: portal, api, web, vite, mcp-auth
                   Example: ["portal", "api"]
+                  Note: mcp-auth uses fixed port 8765 (for OAuth callbacks)
 
     Returns worker info including allocated service ports:
         {
@@ -478,7 +498,8 @@ def list_services():
     """List available services that can be exposed on workers"""
     return jsonify({
         'available_services': SERVICE_PORTS,
-        'description': 'Pass service names in the "services" array when creating a worker'
+        'fixed_port_services': list(FIXED_PORT_SERVICES),
+        'description': 'Pass service names in the "services" array when creating a worker. Fixed port services use the same host and container port (required for OAuth callbacks).'
     })
 
 
