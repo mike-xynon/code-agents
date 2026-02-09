@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Nginx Reverse Proxy
   # Single entry point on port 8080
@@ -70,17 +68,20 @@ services:
 networks:
   claude-farm-network:
     name: claude-farm-network
-    driver: bridge
+    external: true
 
 volumes:
   # Shared storage for worker repositories
   shared-repos:
     name: docker-claude-farm_shared-repos
+    external: true
 
   # Shared state storage
   shared-state:
     name: docker-claude-farm_shared-state
+    external: true
 
   # Redis persistence
   redis-data:
     name: docker-claude-farm_redis-data
+    external: true

@@ -48,10 +48,10 @@ A Docker-based orchestration system for running multiple Claude Code instances i
 
 ### Installation
 
-1. **Clone or download this repository**
+1. **Clone the code-agents repository**
    ```bash
-   git clone <repository-url>
-   cd docker-claude-farm
+   git clone git@github.com:mike-xynon/code-agents.git
+   cd code-agents/agents/cto/children/agent-farm
    ```
 
 2. **Configure environment**
