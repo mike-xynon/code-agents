@@ -212,6 +212,48 @@ interface SectorMarketComment {
 }
 ```
 
+## Trade DTOs Reference
+
+Two DTO files define trade-related types. When adding new trade DTOs, check these first.
+
+### Trade Planning DTOs (`TradePlanningDtos.cs`)
+
+Older trade planning system with session-based workflow.
+
+| Class | Key Fields | Purpose |
+|-------|------------|---------|
+| `ProposedTradeDto` | InstrumentId, Symbol, Action, Quantity, EstimatedValue | Individual proposed trade |
+| `TradeCalculationResultDto` | List\<ProposedTradeDto\>, Analysis | Trade calculation result |
+| `TradePlanningSessionDto` | SessionId, Portfolios, ModelAdjustments | Session with filtered portfolios |
+| `PortfolioLevelAnalysisDto` | TotalBuyValue, TotalSellValue, NetCashMovement | Portfolio aggregation |
+| `TradeExecutionStatusDto` | FilledQuantity, AveragePrice, Status | Execution result |
+| `UpdateSessionModelAdjustmentsRequestDto` | Constraints, Substitutions, ExitStrategies | Session-specific overrides |
+| `SessionInstrumentConstraintDto` | InstrumentId, Symbol, DoNotBuy, DoNotSell, Hold | Per-instrument trading rules |
+| `GradualExitStrategyDto` | InstrumentId, CurrentQuantity, TargetQuantity, MaxSellPercent | Illiquid position exit plan |
+
+### Trading Copilot DTOs (`TradingCopilotDtos.cs`)
+
+Trading Copilot uses flatter structures optimized for UI binding.
+
+| Class | Key Fields | Purpose |
+|-------|------------|---------|
+| `HoldingActual` | InstrumentCode, Action, Amount, MinAmount, MaxAmount | Single holding with trade |
+| `PortfolioActuals` | PortfolioId, Holdings, PendingWithdrawal | Portfolio with all holdings |
+| `ExecutionPlan` | Portfolios, Totals, InstrumentSummaries | Complete execution plan |
+| `ExecutionTotals` | SellValue, BuyValue, NetCashFlow, TradeCount | Aggregate totals |
+| `InstrumentSummary` | InstrumentCode, TotalSellValue, TotalBuyValue | Cross-portfolio aggregation |
+| `BuyReductionSummary` | TotalOriginalBuys, TotalReducedBuys, CashPreserved | Buy reduction tracking |
+
+### Key Differences
+
+| Aspect | TradePlanningDtos | TradingCopilotDtos |
+|--------|-------------------|---------------------|
+| Instrument ID | `InstrumentId` (Guid) | `InstrumentCode` (string) |
+| Trade amount | `Quantity` + `EstimatedValue` | `Amount` (single value) |
+| Range constraints | Not present | `MinAmount`, `MaxAmount` |
+| Deferral tracking | Via `Status` field | `IsDeferred`, `DeferReason` |
+| Event context | Not present | `Categories[]` for events |
+
 ## Key Files
 
 ### Backend (C#)
@@ -406,9 +448,689 @@ Tolerance concerns appear as flags on recommendations:
 4. **Factor in momentum** - if momentum is poor, tolerance concern is less urgent
 5. **Highlight substitution** - if deferring CBA, can we sell more NAB instead?
 
+## Workflow Modes
+
+Three workflow modes determine how trades are planned:
+
+| Mode | AI Analysis | Sell Handling | Buy Handling |
+|------|-------------|---------------|--------------|
+| `QuickRebalance` | None | Execute all | Execute all |
+| `Manual` | None | User controls | User controls |
+| `AiPlan` | Full LLM | AI recommends deferrals | AI optimizes reductions |
+
+### AiPlan Mode
+
+When AiPlan is selected via `PUT /workflow-mode`:
+1. Auto-selects all portfolios with pending trades
+2. Runs `AnalyzeAsync()` to generate LLM recommendations
+3. Stores synthesis for use in execution plan generation
+4. Applies recommendations to sells immediately
+
+## Buy Workflow
+
+### Multi-Phase Planning (Sells → Buys)
+
+The AiPlan workflow chains sell decisions into buy planning:
+
+```
+Sells Phase                           Buys Phase
+┌─────────────┐                      ┌─────────────┐
+│ AiPlan      │──── /advance-phase ───>│ AiPlan      │
+│ Mode        │                      │ Mode        │
+├─────────────┤                      ├─────────────┤
+│ Sells/Holds │                      │ Reduced     │
+│ Deferrals   │  ➝ Preserve All ➝    │ Buys based  │
+│             │                      │ on cash     │
+└─────────────┘                      └─────────────┘
+```
+
+### Buy Phase Flow (AI Mode)
+
+The buy phase follows a clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 1: CALCULATE DRIFT & TRADE AMOUNTS (Algorithm)                │
+│                                                                     │
+│   • Calculate portfolio drift vs model targets                      │
+│   • Determine buy amounts needed per holding                        │
+│   • Preserve all sell decisions from previous phase                 │
+│   • Output: Original buy amounts (before any reduction)             │
+└─────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 2: CALCULATE DEFERRAL BUDGET (Algorithm)                      │
+│                                                                     │
+│   • Available Cash = Sell Proceeds − Pending Withdrawals            │
+│   • Total Buy Demand = Sum of all buy amounts                       │
+│   • Deferral Needed = Buy Demand − Available Cash                   │
+│   • Format data for LLM (TOON format with dividends, momentum)      │
+└─────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 3: DECIDE WHICH BUYS TO REDUCE (LLM)                          │
+│                                                                     │
+│   LLM receives:                                                     │
+│   • Portfolio context (value, model, cash available)                │
+│   • Deferral budget (how much total must be deferred)               │
+│   • Per-instrument data (amount, weights, ex-div, momentum)         │
+│                                                                     │
+│   LLM decides:                                                      │
+│   • WHICH positions to defer (based on dividends, momentum, gaps)   │
+│   • HOW MUCH to defer per position (proceed/partial/defer)          │
+│   • WHY each decision was made (reason text)                        │
+│                                                                     │
+│   LLM does NOT do math - just picks positions and percentages       │
+└─────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 4: APPLY LLM DECISIONS (Algorithm)                            │
+│                                                                     │
+│   • Apply proceed/partial/defer to each holding                     │
+│   • Calculate final amounts from LLM percentages                    │
+│   • Validate total deferred meets budget                            │
+│   • Scale if needed to hit exact cash constraint                    │
+│   • Set DeferReason on each affected holding                        │
+└─────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ STEP 5: GENERATE UNIFIED SUMMARY (LLM)                             │
+│                                                                     │
+│   Synthesizes complete trading picture:                             │
+│   • Sells phase results (approved, deferred, reasons)               │
+│   • Buys phase results (proceeding, reduced, deferred)              │
+│   • Market context (momentum, sector trends)                        │
+│   • Net cash flow and overall impact                                │
+│   • Key events (dividends captured, CGT optimization)               │
+│                                                                     │
+│   Output: Executive summary for display in AI Assistant panel       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### API Endpoint: Advance Phase
+
+`POST /api/trading-copilot/sessions/{sessionId}/advance-phase`
+
+Transitions between workflow phases (Sells → Buys → Review):
+1. **Calculate drift and trades**: Determines buy amounts from model targets (no reduction yet)
+2. **Preserve sell decisions**: All sells and deferrals from previous phase are retained
+3. **Calculate deferral budget**: How much total buy value must be reduced
+4. **LLM decides reductions**: Which specific buys to defer based on market context
+5. **Apply decisions**: Algorithm applies LLM recommendations to holdings
+6. **Generate summary**: Creates unified executive summary combining both phases
+
+**Response:**
+```typescript
+interface AdvancePhaseResponse {
+  currentPhase: WorkflowPhase;
+  actuals: ExecutionPlan;
+  buyReductionSummary?: BuyReductionSummary;  // Present when transitioning to Buys
+  executiveSummary?: string;  // Unified summary combining sells + buys + market context
+}
+```
+
+### Phase Transition: Preserving Sell Decisions
+
+**Critical**: When advancing from Sells → Buys phase, all sell-related decisions must be preserved.
+
+The `GenerateBuyExecutionPlan` function handles this:
+
+```csharp
+// Preserves: actual sells, deferred sells (now holds), and any holds with defer reasons
+var existingSellsAndDeferred = currentActuals?.Portfolios
+    .SelectMany(p => p.Holdings
+        .Where(h => h.Action == TradeAction.Sell
+                 || h.IsDeferred
+                 || !string.IsNullOrEmpty(h.DeferReason))
+        .Select(h => (PortfolioId: p.PortfolioId, Holding: h)))
+    .GroupBy(x => x.PortfolioId)
+    .ToDictionary(g => g.Key, g => g.Select(x => x.Holding).ToList());
+```
+
+This preserves:
+1. **Actual sells** (`Action == TradeAction.Sell`) - Proceeds with sale
+2. **Deferred sells** (`IsDeferred == true`) - Originally sell, now held
+3. **Holds with reasons** (`DeferReason != null`) - AI decided not to sell, with explanation
+
+When building the buy plan:
+```csharp
+// Start with existing sells and deferred holdings (preserve from previous phase)
+var holdings = existingSellsAndDeferred.GetValueOrDefault(p.PortfolioId, []).ToList();
+var preservedInstruments = holdings.Select(h => h.InstrumentCode).ToHashSet();
+
+// Add buys and holds for instruments NOT already preserved from sells phase
+foreach (var h in p.Holdings.Where(h => !preservedInstruments.Contains(h.InstrumentCode)))
+{
+    // ... add buy or hold as appropriate
+}
+```
+
+This ensures:
+- Sell decisions survive the phase transition
+- Defer reasons are visible in the Buy phase UI
+- No duplication of holdings in the execution plan
+
+### Available Cash Formula
+
+```
+AvailableCashForBuys = CurrentCash + ApprovedSellValue - PendingWithdrawal
+```
+
+Where:
+- `CurrentCash`: Portfolio's existing cash balance (estimated as 2% of portfolio value)
+- `ApprovedSellValue`: Sum of non-deferred sells from finalized sell plan
+- `PendingWithdrawal`: Cash draw requirement that must be funded first
+
+### Tiered Buy Reduction Algorithm (Non-AI / Fallback)
+
+Used in Manual/QuickRebalance modes, or as fallback if LLM analysis fails.
+
+When buy amounts exceed available cash, reduces buys using tiered proportional reduction.
+**Rationale**: Prioritizes completing positions closest to model targets while scaling back positions that are further behind.
+
+| Tier | Model Progress | Max Reduction | Priority |
+|------|----------------|---------------|----------|
+| 1    | 80-100% of target | 30% | Last to reduce |
+| 2    | 50-80% of target | 50% | Moderate |
+| 3    | <50% of target | 80% | First to reduce |
+
+**Example:**
+```
+Portfolio with $50,000 available cash, $80,000 in pending buys:
+
+Holding A: 90% to target → Tier 1, reduce max 30%
+Holding B: 70% to target → Tier 2, reduce max 50%
+Holding C: 40% to target → Tier 3, reduce max 80%
+
+Algorithm reduces Tier 3 first, then Tier 2, then Tier 1
+until total buys = available cash
+```
+
+### LLM Buy Analysis (AiPlan Mode)
+
+In AiPlan mode, LLM decides buy deferrals (tiered algorithm is fallback only):
+
+```
+Advance Phase (Sells → Buys)
+    │
+    ├── 1. Calculate drift and original buy amounts (NO reduction yet)
+    │   └── GenerateBuyExecutionPlan(skipAlgorithmicReduction: true)
+    │
+    ├── 2. Build LLM inputs with ORIGINAL amounts:
+    │   ├── Available cash = Sell proceeds - Pending withdrawal
+    │   ├── Total buy demand (original, unreduced)
+    │   ├── Deferral needed = demand - cash (if positive)
+    │   └── Per-instrument: symbol, ORIGINAL amount, weight gap, ex-div, momentum
+    │
+    ├── 3. LLM decides which buys to reduce:
+    │   └── TradingAnalysisOrchestrator.AnalyzeBuysAsync()
+    │       • Sees actual deferral budget
+    │       • Picks WHICH positions based on dividends, momentum
+    │       • Does NOT do math - just picks and explains
+    │
+    ├── 4. Algorithm applies LLM decisions:
+    │   └── ApplyBuyRecommendations()
+    │       ├── "proceed" → keep full amount
+    │       ├── "partial" → apply proceedPercent% to original
+    │       └── "defer" → set amount to 0, mark IsDeferred
+    │
+    ├── 5. Generate unified summary (combines sells + buys + market)
+    │
+    └── FALLBACK: If LLM returns null, use tiered algorithmic reduction
+```
+
+**Key principle**: Algorithm handles MATH (calculating amounts, applying percentages).
+LLM handles JUDGMENT (which positions to defer, why).
+
+**LLM Buy Deferral Priorities:**
+1. **Dividends nearby** - Prefer deferring buys just before ex-div to capture yield
+2. **Buying dips** - Favor proceeding on instruments with good long-term momentum but recent weakness
+3. **Spread deferrals** - Avoid deferring exactly one instrument (concentration risk)
+
+**Input Format (TOON):**
+```
+=== BUY ANALYSIS ===
+Portfolio: ABC123 (John Smith)
+Model: Conservative Growth | Value: $500,000
+Cash available: $25,000 | Buy demand: $40,000 | Deferral needed: $15,000
+
+Buys{sym,amount,currW%,tgtW%,gap%,exdiv,ret1mo,ret6mo}:
+CBA,8500,2.1,4.0,1.9,8d,-3%,+8%
+BHP,12000,1.5,4.0,2.5,,-5%,+12%
+WBC,6000,3.2,4.0,0.8,15d,-1%,+6%
+```
+
+**Output Format:**
+```json
+{
+  "portfolios": [{
+    "accountNumber": "ABC123",
+    "availableCash": 25000,
+    "totalBuyDemand": 40000,
+    "deferralNeeded": 15000,
+    "summary": "Defer BHP fully, proceed with CBA and WBC to capture upcoming dividends",
+    "recommendations": [
+      {"symbol": "CBA", "action": "proceed", "amount": 8500, "reason": "Dividend capture in 8 days"},
+      {"symbol": "BHP", "action": "defer", "amount": 0, "originalAmount": 12000, "reason": "No imminent catalyst, defer to preserve cash"},
+      {"symbol": "WBC", "action": "proceed", "amount": 6000, "reason": "Dividend in 15 days, reasonable momentum"}
+    ],
+    "validation": {
+      "totalProceeding": 14500,
+      "totalDeferred": 12000,
+      "withinBudget": true
+    }
+  }]
+}
+```
+
+### Unified Executive Summary (Step 5)
+
+After applying buy decisions, generates a combined summary for display in the AI Assistant panel.
+
+**Purpose**: Provide a single cohesive narrative that covers the entire trading session - sells, buys, market context, and impact.
+
+**Content includes:**
+- **Trading Plan Overview**: Portfolio count, workflow mode
+- **Sells Phase Summary**: Count, total value, deferrals with reasons
+- **Buys Phase Summary**: Original demand, proceeding, deferred, reduction strategy
+- **Net Cash Flow**: Total sells minus total buys
+- **Market Context**: Momentum insights, sector trends (from synthesis)
+- **Key Events**: Dividends captured, CGT optimization applied
+
+**Example Output:**
+```markdown
+**Trading Plan: 60 Portfolios**
+
+**Sells Phase (Complete):** 403 sells totaling $18,664,713
+• 16 positions deferred (dividend timing, CGT optimization)
+
+**Buys Phase (Current):** 148 buys totaling $5,226,061
+• Original buy demand: $6,500,000
+• Proceeding: $5,226,061
+• Deferred: $1,273,939 (19.6%)
+• Strategy: AI-optimized - prioritizes dividends, buys dips
+
+**Net Cash Flow:** $13,438,651 (net seller)
+
+**Market Context:** Mixed global momentum with NYSE leading (+5% 1mo)
+vs ASX/NASDAQ (+1%). Materials sector showing strength.
+```
+
+**Implementation**: `GenerateUnifiedSummary()` in TradingCopilotController assembles this from session state and synthesis data.
+
+**Future Enhancement**: Could use LLM to generate more natural prose summary instead of structured format.
+
+### Session State
+
+```typescript
+interface TradingSession {
+  // ... existing fields
+  currentPhase: WorkflowPhase;       // Sells | Buys | Review
+  buyReductionSummary?: BuyReductionSummary;  // Set after advancing to Buys
+}
+
+// Lean DTO - no SellPlanResult needed, compute from existing actuals
+interface BuyReductionSummary {
+  totalOriginalBuys: number;
+  totalReducedBuys: number;
+  cashPreserved: number;
+  overallReductionPercent: number;
+  strategy: string;
+}
+```
+
 ## Open Questions
 
 1. **Momentum Data Source** - Currently using CategoryData.Momentum which may be null; need reliable source
 2. **Caching** - Should momentum analysis be cached within a session?
 3. **Partial Results** - How to handle if momentum analysis fails but portfolio analysis succeeds?
 4. **Tolerance Aggregation** - When same symbol appears in multiple portfolios with different tolerances, how to aggregate?
+5. **Buy Reduction Display** - How should the UI display the reduction summary and per-holding reductions?
+
+---
+
+## Test Data Design
+
+### Mock Portfolio Composition
+
+The mock portfolios (`MockData/mock-portfolios.json`) are structured into three types to exercise different trading scenarios. This data will eventually become formal test fixtures.
+
+| Type | Count | Cash Level | Withdrawal | Expected Trades |
+|------|-------|------------|------------|-----------------|
+| **Accumulation** | ~20 | High (target + 10-15%) | None | Predominantly buys |
+| **Withdrawal** | ~20 | Low (1.5-3%) | $85K-$417K | Predominantly sells |
+| **Rebalance** | ~20 | Near target | None | Internal rebalancing |
+
+#### Accumulation Portfolios (ACC100001-ACC100020)
+
+Simulate accounts receiving deposits or with excess cash build-up:
+- Cash significantly exceeds model target (e.g., 32% for Balanced Income with 18% target)
+- No pending withdrawal
+- Holdings are underweight due to cash dilution → triggers buys
+- Tests buy workflow and LLM buy deferral decisions
+
+Example: `ACC100002` - Balanced Income model, 32% cash (18% target), no withdrawal → strong buy candidates
+
+#### Withdrawal Portfolios (ACC100021-ACC100040)
+
+Simulate accounts funding distributions or pension payments:
+- Minimal cash (1.5-3%)
+- Large pending withdrawal ($85K-$417K)
+- Must sell holdings to fund withdrawal → triggers sells
+- Tests sell workflow and AI deferral logic (dividend capture, momentum)
+
+Example: `ACC100028` - Growth Leaders model, 1.5% cash, $417K withdrawal → significant sells required
+
+#### Rebalance Portfolios (ACC100041-ACC100060)
+
+Simulate normal drift without external cash flows:
+- Cash approximately matches model target
+- No pending withdrawal
+- Holdings have varied from model weights → internal rebalancing
+- Tests both buy and sell generation for model alignment
+
+Example: `ACC100045` - Conservative Core model, 12% cash (12.5% target), no withdrawal → sells fund buys internally
+
+### Model Target Cash Percentages
+
+Each model includes a target cash allocation. This is critical for understanding trade generation.
+
+| Model | Target Cash % |
+|-------|---------------|
+| Balanced Income | 18% |
+| Growth Leaders | 20% |
+| Conservative Core | 12.5% |
+| Concentrated Value | 10% |
+| Diversified Sectors | 22% |
+| High Growth Tilt | 23% |
+
+### Weight Calculation and Trade Generation
+
+The actual weight of each holding is calculated relative to **investable value**:
+
+```
+investableValue = portfolioTotalValue - pendingWithdrawal
+actualWeight = (holdingValue / investableValue) * 100
+variance = actualWeight - targetWeight
+```
+
+**Key implications:**
+
+1. **Withdrawal reduces investable base** - A $500K portfolio with $100K withdrawal has $400K investable. A $40K holding becomes 10% (not 8%), triggering different trades.
+
+2. **High cash → underweight holdings** - When cash exceeds model target, non-cash holdings are proportionally underweight, triggering buys.
+
+3. **Trade triggers based on variance vs tolerance:**
+   - `variance > tolerance` (overweight) → **Sell**
+   - `variance < -tolerance` (underweight) → **Buy**
+   - `|variance| <= tolerance` → **Hold**
+
+**Example:**
+```
+Portfolio: $500,000 total, $50,000 pending withdrawal
+Model: Conservative Core (12.5% cash target, 2% tolerance)
+
+Investable: $450,000
+Current Cash: $45,000 (10% of investable)
+Target Cash: $56,250 (12.5% of $450K)
+
+Holding CBA: $36,000 → 8.0% actual
+CBA Target: 6.0%
+CBA Variance: +2.0% (at tolerance edge)
+
+→ CBA may sell to fund cash shortfall and withdrawal
+```
+
+This design ensures the mock data produces realistic trade distributions for testing all workflow paths.
+
+---
+
+## Post-Demo: System Unification
+
+### Current State: Two Parallel Systems
+
+The codebase has two trading session systems that need unification:
+
+| Aspect | TradePlanningController | TradingCopilotController |
+|--------|------------------------|-------------------------|
+| **Purpose** | 4-step wizard workflow | AI-assisted trading |
+| **Session store** | Redis (`RedisTradePlanningStore`) | In-memory (`Sessions` dictionary) |
+| **Trade type** | `ProposedTradeDto` (Guid IDs) | `HoldingActual` (string codes) |
+| **OMS integration** | Full (`IMorrisonProxy.CreateOrdersBatchAsync`) | None (demo only) |
+| **Execution tracking** | `TradeExecutionStatusDto` | Not implemented |
+
+### OMS Execution Path (The Truth)
+
+The actual order submission flows through Morrison OMS:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        EXECUTION PIPELINE                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  TradePlanningService.ExecuteTradesAsync()                             │
+│  ├── Filter approved trades from session                                │
+│  ├── Group by PortfolioId                                               │
+│  ├── Build BatchOrderCreationRequest                                    │
+│  │   └── PortfolioOrderRequest[]                                        │
+│  │       └── TradeDecisionRequest[]                                     │
+│  │           ├── InstrumentKey (Guid)                                   │
+│  │           ├── Decision = Trade                                       │
+│  │           ├── ExpectedQuantity                                       │
+│  │           └── TradeSide (Buy/Sell)                                   │
+│  │                                                                      │
+│  ├── IMorrisonProxy.CreateOrdersBatchAsync(request)                    │
+│  │   POST /api/rebalancing/orders/batch                                │
+│  │                                                                      │
+│  ├── BatchOrderCreationResult                                          │
+│  │   └── OrderCreationResult[] (one per portfolio)                     │
+│  │       ├── OrderKey (Guid)                                           │
+│  │       ├── Success, FailureReason                                    │
+│  │       └── CreatedTradeItem[]                                        │
+│  │           ├── TradeKey (Guid)                                       │
+│  │           ├── InstrumentKey, Symbol, Exchange                       │
+│  │           ├── Units, TradeValue, TradeSide                         │
+│  │           └── WasHeld                                               │
+│  │                                                                      │
+│  └── Map to InternalTradeExecution[]                                   │
+│      └── Redis session storage                                         │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key OMS Types (NQ.Trading.Models)
+
+```
+NQ.Trading.Models/Portfolio/
+├── BatchOrderCreationRequest.cs     // Input to OMS
+│   └── PortfolioOrderRequest
+│       └── TradeDecisionRequest (InstrumentKey, Decision, Quantity)
+│
+├── OrderCreationResult.cs           // Output from OMS
+│   └── CreatedTradeItem (TradeKey, InstrumentKey, Units, WasHeld)
+│
+├── DriftCalculationResult.cs        // Pre-execution drift data
+│   └── PfHoldingDto (Holdings with Drift details)
+│       └── HoldingDriftDto (TradeValue, TradeUnits, Tolerance)
+│
+├── OrderBatchModels.cs              // Batch tracking
+│   ├── OrderBatchBase (Status, ModelCount, TradeCount)
+│   └── TradeBatchItem (TradeKey, Status, Units, UnitPrice)
+│
+└── OrderFulfilmentModels.cs         // Execution progress
+    └── TradeFulfilmentItem (UnitsFilled, AverageFillPrice, FillPercentage)
+```
+
+### IMorrisonProxy Interface (OMS Gateway)
+
+Location: `NQ.Trading.Models/Interfaces/ITradeServiceBase.cs`
+
+```csharp
+// EXECUTION
+Task<BatchOrderCreationResult> CreateOrdersBatchAsync(BatchOrderCreationRequest request);
+
+// MONITORING
+Task<IReadOnlyList<OrderBatchSummary>> GetPendingBatchesAsync(...);
+Task<IReadOnlyList<OrderBatchSummary>> GetExecutingBatchesAsync(...);
+Task<OrderBatchBase?> GetBatchDetailsAsync(Guid orderKey, ...);
+Task<OrderFulfilmentStatus?> GetBatchFulfilmentAsync(Guid orderKey, ...);
+```
+
+### Unification Strategy
+
+#### Phase 1: Align Session Storage (Post-Demo)
+
+Replace TradingCopilot's in-memory `Sessions` with Redis:
+
+```csharp
+// Current (demo)
+private static readonly ConcurrentDictionary<string, TradingSession> Sessions = new();
+
+// Target (production)
+private readonly ITradingSessionStore _sessionStore;  // Redis-backed
+```
+
+Benefits:
+- Session persistence across restarts
+- Multi-instance deployment support
+- Consistent expiration handling
+
+#### Phase 2: Unify Trade DTOs
+
+Create adapter layer to convert between DTOs:
+
+```csharp
+// Copilot → TradePlanning
+HoldingActual → ProposedTradeDto
+├── InstrumentCode → InstrumentId (lookup via IInstrumentService)
+├── Amount → EstimatedValue
+├── Action → Action ("Buy" | "Sell")
+├── IsDeferred, DeferReason → Status = "Held"
+└── Categories → ComplianceFlags
+
+// TradePlanning → OMS
+ProposedTradeDto → TradeDecisionRequest
+├── InstrumentId → InstrumentKey
+├── Quantity → ExpectedQuantity
+└── Action → TradeSide (RebalanceAlertTypes.Buy/Sell)
+```
+
+#### Phase 3: Add OMS Execution to Copilot
+
+Extend `TradingCopilotController` with execution endpoint:
+
+```csharp
+// New endpoint
+[HttpPost("sessions/{sessionId}/execute")]
+public async Task<ActionResult<TradeExecutionResultDto>> ExecuteTrades(string sessionId)
+{
+    // 1. Convert HoldingActual[] → ProposedTradeDto[]
+    // 2. Call TradePlanningService.ExecuteTradesAsync()
+    // 3. Return execution result
+}
+```
+
+Reuse existing execution pipeline - don't duplicate OMS integration.
+
+#### Phase 4: Merge Session Models
+
+Long-term target: Single session model supporting both workflows.
+
+```csharp
+public class UnifiedTradingSession
+{
+    // Identity
+    public required string SessionId { get; set; }
+    public required string UserId { get; set; }
+
+    // Workflow
+    public WorkflowMode Mode { get; set; }        // AI vs Manual
+    public WorkflowPhase Phase { get; set; }      // Sells → Buys → Review
+    public SessionPhase UIPhase { get; set; }     // Selection → Refinement → Execution
+
+    // Data
+    public List<TradingPortfolio> Portfolios { get; set; } = new();
+    public List<UnifiedTrade> Trades { get; set; } = new();      // Unified type
+    public SessionModelAdjustmentsDto? Adjustments { get; set; } // Constraints
+
+    // AI-specific
+    public TradingAnalysisSynthesis? AISynthesis { get; set; }
+    public BuyReductionSummary? BuyReduction { get; set; }
+
+    // Execution
+    public List<TradeExecution> Executions { get; set; } = new();
+}
+
+public class UnifiedTrade
+{
+    public Guid TradeId { get; set; }
+    public Guid PortfolioId { get; set; }
+    public Guid InstrumentId { get; set; }
+    public string InstrumentCode { get; set; }       // Symbol
+
+    // Trade details
+    public TradeAction Action { get; set; }          // Buy/Sell/Hold
+    public decimal Quantity { get; set; }
+    public decimal EstimatedValue { get; set; }
+    public decimal? MinAmount { get; set; }          // From AI (optional)
+    public decimal? MaxAmount { get; set; }          // From AI (optional)
+
+    // Status
+    public TradeStatus Status { get; set; }          // Proposed/Approved/Held/Rejected
+    public bool IsDeferred { get; set; }
+    public string? DeferReason { get; set; }
+    public List<string> Categories { get; set; }     // Events (AI)
+    public List<string> ComplianceFlags { get; set; }// Compliance (Planning)
+
+    // Weights
+    public decimal CurrentWeight { get; set; }
+    public decimal TargetWeight { get; set; }
+}
+```
+
+### File Reference for OMS Integration
+
+| File | Purpose |
+|------|---------|
+| `Tmw.Api/Services/TradePlanning/TradePlanningService.cs` | Orchestrates execution |
+| `Tmw.Api/Services/Storage/RedisTradePlanningStore.cs` | Session persistence |
+| `NQ.Trading.Models/Interfaces/ITradeServiceBase.cs` | OMS interface definition |
+| `NQ.Trading.SharedServices/ApiProxy/MorrisonRestProxy.cs` | HTTP OMS client |
+| `NQ.Trading.Models/Portfolio/BatchOrderCreationRequest.cs` | OMS input |
+| `NQ.Trading.Models/Portfolio/OrderCreationResult.cs` | OMS output |
+
+### Execution Monitoring Flow
+
+```
+POST /execute
+    ↓
+BatchOrderCreationResult (OrderKeys)
+    ↓
+Store OrderKeys in session
+    ↓
+Polling: GET /execution-status
+    ↓
+IMorrisonProxy.GetBatchFulfilmentAsync(orderKey)
+    ↓
+OrderFulfilmentStatus
+├── TradesFilled, TradesPartiallyFilled, TradesPending
+├── TotalBuyValueFilled, TotalSellValueFilled
+└── TradeFulfilmentItem[] (per-trade fill details)
+```
+
+### Migration Checklist
+
+- [ ] Add Redis session store to TradingCopilotController
+- [ ] Create HoldingActual → ProposedTradeDto adapter
+- [ ] Add InstrumentId lookup service (code → Guid)
+- [ ] Add `/execute` endpoint to TradingCopilot
+- [ ] Wire up to existing TradePlanningService execution
+- [ ] Add execution status polling to frontend
+- [ ] Design unified session model
+- [ ] Migrate TradePlanningController to unified model
+- [ ] Migrate TradingCopilotController to unified model
+- [ ] Consolidate DTOs
